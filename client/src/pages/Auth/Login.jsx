@@ -139,7 +139,7 @@ export default function Login() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', flex: 1, marginTop: '120px' }}>
         <motion.div style={{ flex: 1 }} initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2 }}>
-          <LoginInfoRotativo />
+          <CarrosselLogos />
         </motion.div>
 
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -247,4 +247,3 @@ export default function Login() {
     </div>
   );
 }
-
