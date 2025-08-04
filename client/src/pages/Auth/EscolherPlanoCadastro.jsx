@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Gift, Star, Rocket, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api';
 import '../../styles/planos.css';
 
 const planos = [
@@ -41,96 +40,160 @@ const planos = [
 
 function EscolherPlanoCadastro() {
   const [planoSelecionado, setPlanoSelecionado] = useState(null);
-  const [formaPagamento, setFormaPagamento] = useState('cartao');
-  const navigate = useNavigate();
+  const [formaPagamento, setFormaPagamento] = useState('');
+  const [mostrarModal, setMostrarModal] = useState(false);
 
-  const selecionarPlano = (plano) => {
-    setPlanoSelecionado(plano);
-    setFormaPagamento('cartao');
+  const valoresPlano = {
+    teste_gratis: 0,
+    basico: 19.9,
+    intermediario: 29.9,
+    completo: 39.9,
   };
 
-  const cancelar = () => {
-    setPlanoSelecionado(null);
-  };
-
-  const finalizar = async () => {
-    if (!planoSelecionado) return;
-    try {
-      await api.post('/auth/finalizar-cadastro', {
-        token: localStorage.getItem('tokenCadastro'),
-        plano: planoSelecionado.id,
-        formaPagamento: planoSelecionado.id === 'teste_gratis' ? null : formaPagamento,
-      });
-      localStorage.clear();
-      alert('Cadastro finalizado com sucesso!');
-      navigate('/login');
-    } catch (err) {
-      console.error('Erro ao finalizar cadastro', err);
-    }
-  };
+  const navegar = useNavigate();
 
   return (
-    <div className="pagina-escolher-plano">
-      <div className="painel-planos">
-        <h1>Escolha seu Plano</h1>
-        <p>Selecione o plano desejado para concluir o cadastro.</p>
-        <div className="grid-planos">
-          {planos.map((plano) => (
-            <div key={plano.id} className="card-plano-modern">
-              <plano.Icon size={40} color={plano.cor} />
-              <h3>{plano.nome}</h3>
-              <p>{plano.descricao}</p>
-              <ul className="lista-beneficios">
-                {plano.beneficios.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-              <button
-                className="btn-escolher-moderno"
-                style={{ backgroundColor: plano.cor }}
-                onClick={() => selecionarPlano(plano)}
-              >
-                Escolher
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {planoSelecionado && (
-          planoSelecionado.id === 'teste_gratis' ? (
-            <div className="acoes-teste-gratis">
-              <button className="botao-acao" onClick={finalizar}>
-                Confirmar
-              </button>
-              <button className="botao-cancelar" onClick={cancelar}>
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <div className="painel-pagamento">
+    <>
+      {mostrarModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '15px',
+              maxWidth: '400px',
+              width: '90%',
+              textAlign: 'center',
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                marginBottom: '10px',
+              }}
+            >
+              Confirmar Plano
+            </h2>
+            <p>
+              Você selecionou o plano <strong>{planoSelecionado}</strong>.
+            </p>
+            <p>
+              {planoSelecionado === 'teste_gratis'
+                ? 'Esse plano é gratuito por 7 dias.'
+                : `Valor: R$ ${valoresPlano[planoSelecionado].toFixed(2)} / mês`}
+            </p>
+            {planoSelecionado !== 'teste_gratis' && (
               <select
-                className="select-pagamento"
                 value={formaPagamento}
                 onChange={(e) => setFormaPagamento(e.target.value)}
+                style={{
+                  marginTop: '10px',
+                  padding: '8px',
+                  borderRadius: '10px',
+                  border: '1px solid #ccc',
+                  width: '100%',
+                }}
               >
-                <option value="cartao">Cartão de crédito</option>
-                <option value="boleto">Boleto</option>
+                <option value="">Escolha a forma de pagamento</option>
                 <option value="pix">Pix</option>
+                <option value="boleto">Boleto</option>
+                <option value="cartao">Cartão</option>
               </select>
-              <div className="botoes-pagamento">
-                <button className="botao-cancelar" onClick={cancelar}>
-                  Cancelar
-                </button>
-                <button className="botao-acao" onClick={finalizar}>
-                  Confirmar
+            )}
+            <div
+              style={{
+                marginTop: '20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+              }}
+            >
+              <button
+                onClick={() => setMostrarModal(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#ccc',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (planoSelecionado !== 'teste_gratis' && !formaPagamento) {
+                    alert('Selecione uma forma de pagamento');
+                    return;
+                  }
+                  const queryParams = new URLSearchParams({
+                    plano: planoSelecionado,
+                    pagamento: formaPagamento,
+                  }).toString();
+                  navegar(`/cadastro?${queryParams}`);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#1565c0',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="pagina-escolher-plano">
+        <div className="painel-planos">
+          <h1>Escolha seu Plano</h1>
+          <p>Selecione o plano desejado para concluir o cadastro.</p>
+          <div className="grid-planos">
+            {planos.map((plano) => (
+              <div key={plano.id} className="card-plano-modern">
+                <plano.Icon size={40} color={plano.cor} />
+                <h3>{plano.nome}</h3>
+                <p>{plano.descricao}</p>
+                <ul className="lista-beneficios">
+                  {plano.beneficios.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => {
+                    setPlanoSelecionado(plano.id);
+                    setMostrarModal(true);
+                  }}
+                  className="btn-escolher-moderno"
+                  style={{ backgroundColor: plano.cor }}
+                >
+                  Escolher
                 </button>
               </div>
-            </div>
-          )
-        )}
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
 export default EscolherPlanoCadastro;
+
