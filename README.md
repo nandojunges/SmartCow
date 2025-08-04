@@ -1,0 +1,2 @@
+# Projeto SmartCow
+Backend inicial.
