@@ -27,6 +27,14 @@ export default function Login() {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+  const inputStyle = {
+    width: '100%',
+    padding: '12px',
+    fontSize: '1rem',
+    borderRadius: '10px',
+    border: '1px solid #ccc',
+  };
+
   const validar = () => {
     const emailTrim = email.trim();
     const senhaTrim = senha.trim();
@@ -125,11 +133,11 @@ export default function Login() {
         <h2
           style={{
             fontFamily: "'Pacifico', cursive",
-            fontSize: '2rem',
-            fontWeight: 500,
-            color: '#facc15',
-            textShadow: '1px 1px 3px rgba(0,0,0,0.4)',
-            margin: 0,
+            fontSize: '22px',
+            color: '#ffbb33',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.4)',
+            marginTop: '10px',
+            marginBottom: 0,
           }}
         >
           Feito por quem vive no campo.
@@ -140,11 +148,11 @@ export default function Login() {
         style={{
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center',
-          width: '100%',
-          flex: 1,
+          alignItems: 'flex-start',
+          gap: '60px',
           marginTop: '120px',
-          gap: '40px',
+          padding: '0 40px',
+          width: '100%',
         }}
       >
         <motion.div
@@ -188,7 +196,7 @@ export default function Login() {
                   textAlign: 'center',
                   fontWeight: 700,
                   color: '#1e3a8a',
-                  marginBottom: '16px',
+                  marginBottom: '20px',
                 }}
               >
                 Login
@@ -207,14 +215,7 @@ export default function Login() {
                       placeholder="Digite seu e-mail"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      style={{
-                        width: '100%',
-                        maxWidth: '360px',
-                        height: '40px',
-                        padding: '0 12px',
-                        borderRadius: '20px',
-                        border: '1px solid #ccc',
-                      }}
+                      style={inputStyle}
                     />
                   </div>
                   {erroEmail && <p style={{ color: 'red', fontSize: '0.875rem', marginTop: '4px' }}>{erroEmail}</p>}
@@ -222,20 +223,13 @@ export default function Login() {
 
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <label style={{ fontSize: '0.9rem', alignSelf: 'flex-start' }}>Senha</label>
-                  <div style={{ position: 'relative', width: '100%', maxWidth: '360px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', position: 'relative', width: '100%', maxWidth: '360px' }}>
                     <input
                       type={mostrarSenha ? 'text' : 'password'}
                       placeholder="Digite sua senha"
                       value={senha}
                       onChange={(e) => setSenha(e.target.value)}
-                      style={{
-                        width: '100%',
-                        maxWidth: '360px',
-                        height: '40px',
-                        padding: '0 40px 0 12px',
-                        borderRadius: '20px',
-                        border: '1px solid #ccc',
-                      }}
+                      style={{ ...inputStyle, paddingRight: '40px' }}
                     />
                     <button
                       type="button"
@@ -300,23 +294,15 @@ export default function Login() {
                 >
                   Entrar
                 </button>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    maxWidth: '360px',
-                    fontSize: '0.85rem',
-                  }}
-                >
+                <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.85rem' }}>
                   <Link to="/esqueci-senha" style={{ textDecoration: 'underline', color: '#1e3a8a' }}>
                     Esqueceu a senha?
                   </Link>
+                  <br />
                   <Link to="/escolher-plano" style={{ textDecoration: 'underline', color: '#1e3a8a' }}>
                     Cadastrar-se
                   </Link>
-                </div>
+                </p>
               </form>
             </div>
           </motion.div>
