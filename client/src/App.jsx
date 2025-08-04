@@ -4,7 +4,7 @@ import Cadastro from './pages/Auth/Cadastro';
 import VerificarEmail from './pages/Auth/VerificarEmail';
 import EsqueciSenha from './pages/Auth/EsqueciSenha';
 import Logout from './pages/Auth/Logout';
-import EscolherPlanoCadastro from './pages/EscolherPlanoCadastro';
+import EscolherPlanoCadastro from './pages/Auth/EscolherPlanoCadastro';
 
 function App() {
   return (

@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { Gift, Star, Rocket, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
-import ModalPlanoSelecionado from '../components/ModalPlanoSelecionado';
-import '../styles/planos.css';
+import api from '../../api';
+import '../../styles/planos.css';
 
 const planos = [
   {
     id: 'teste_gratis',
     nome: 'Teste Grátis',
     descricao: 'Aproveite 7 dias gratuitamente',
-    preco: 'Grátis',
     beneficios: ['Acesso limitado', 'Sem suporte', 'Expira após 7 dias'],
     cor: '#3b82f6',
     Icon: Gift,
@@ -19,7 +17,6 @@ const planos = [
     id: 'basico',
     nome: 'Básico',
     descricao: 'Funcionalidades essenciais',
-    preco: 'R$19,90/mês',
     beneficios: ['Controle de tarefas', 'Cadastro de vacas', 'Exportação de dados'],
     cor: '#10b981',
     Icon: Star,
@@ -28,7 +25,6 @@ const planos = [
     id: 'intermediario',
     nome: 'Intermediário',
     descricao: 'Inclui bezerras, reprodução e estoque',
-    preco: 'R$29,90/mês',
     beneficios: ['Tudo do Básico', 'Gestão de bezerras', 'Reprodução avançada'],
     cor: '#f59e0b',
     Icon: Rocket,
@@ -37,7 +33,6 @@ const planos = [
     id: 'completo',
     nome: 'Completo',
     descricao: 'Relatórios, gráficos e tudo incluso',
-    preco: 'R$39,90/mês',
     beneficios: ['Tudo do Intermediário', 'Gráficos completos', 'Relatórios PDF'],
     cor: '#8b5cf6',
     Icon: Crown,
@@ -46,32 +41,28 @@ const planos = [
 
 function EscolherPlanoCadastro() {
   const [planoSelecionado, setPlanoSelecionado] = useState(null);
-  const [mostrarModal, setMostrarModal] = useState(false);
+  const [formaPagamento, setFormaPagamento] = useState('cartao');
   const navigate = useNavigate();
 
   const selecionarPlano = (plano) => {
     setPlanoSelecionado(plano);
-    if (plano.id === 'teste_gratis') {
-      setMostrarModal(false);
-    } else {
-      setMostrarModal(true);
-    }
+    setFormaPagamento('cartao');
   };
 
   const cancelar = () => {
     setPlanoSelecionado(null);
-    setMostrarModal(false);
   };
 
-  const finalizar = async (formaPagamento = null) => {
+  const finalizar = async () => {
     if (!planoSelecionado) return;
     try {
       await api.post('/auth/finalizar-cadastro', {
         token: localStorage.getItem('tokenCadastro'),
         plano: planoSelecionado.id,
-        formaPagamento,
+        formaPagamento: planoSelecionado.id === 'teste_gratis' ? null : formaPagamento,
       });
       localStorage.clear();
+      alert('Cadastro finalizado com sucesso!');
       navigate('/login');
     } catch (err) {
       console.error('Erro ao finalizar cadastro', err);
@@ -104,26 +95,43 @@ function EscolherPlanoCadastro() {
             </div>
           ))}
         </div>
-        {planoSelecionado?.id === 'teste_gratis' && (
-          <div className="acoes-teste-gratis">
-            <button className="botao-acao" onClick={() => finalizar()}>
-              Confirmar
-            </button>
-            <button className="botao-cancelar" onClick={cancelar}>
-              Cancelar
-            </button>
-          </div>
+
+        {planoSelecionado && (
+          planoSelecionado.id === 'teste_gratis' ? (
+            <div className="acoes-teste-gratis">
+              <button className="botao-acao" onClick={finalizar}>
+                Confirmar
+              </button>
+              <button className="botao-cancelar" onClick={cancelar}>
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <div className="painel-pagamento">
+              <select
+                className="select-pagamento"
+                value={formaPagamento}
+                onChange={(e) => setFormaPagamento(e.target.value)}
+              >
+                <option value="cartao">Cartão de crédito</option>
+                <option value="boleto">Boleto</option>
+                <option value="pix">Pix</option>
+              </select>
+              <div className="botoes-pagamento">
+                <button className="botao-cancelar" onClick={cancelar}>
+                  Cancelar
+                </button>
+                <button className="botao-acao" onClick={finalizar}>
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          )
         )}
       </div>
-      {mostrarModal && planoSelecionado && planoSelecionado.id !== 'teste_gratis' && (
-        <ModalPlanoSelecionado
-          plano={planoSelecionado}
-          finalizar={finalizar}
-          onClose={cancelar}
-        />
-      )}
     </div>
   );
 }
 
 export default EscolherPlanoCadastro;
+
