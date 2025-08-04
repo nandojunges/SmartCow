@@ -11,6 +11,10 @@ const TokenRecuperacao = sequelize.define('TokenRecuperacao', {
     type: DataTypes.DATE,
     allowNull: false,
   },
+  tipo: {
+    type: DataTypes.ENUM('verificacao', 'recuperacao'),
+    allowNull: false,
+  },
 });
 
 Usuario.hasMany(TokenRecuperacao, { foreignKey: 'userId' });

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const { sequelize } = require('./config/db');
+const cors = require('cors');
 
 // Importar modelos para registrar no Sequelize
 require('./models/Usuario');
@@ -14,6 +15,7 @@ const usuarioRoutes = require('./routes/usuarioRoutes');
 const animalRoutes = require('./routes/animalRoutes');
 
 app.use(express.json());
+app.use(cors());
 
 // Rotas da API
 app.use('/api/auth', authRoutes);
