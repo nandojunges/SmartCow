@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Gift, Star, Rocket, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Select from 'react-select';
 import '../../styles/planos.css';
 
 const planos = [
@@ -50,11 +51,17 @@ function EscolherPlanoCadastro() {
     completo: 39.9,
   };
 
+  const opcoesPagamento = [
+    { value: 'pix', label: 'Pix' },
+    { value: 'boleto', label: 'Boleto' },
+    { value: 'cartao', label: 'Cartão' },
+  ];
+
   const navegar = useNavigate();
 
   return (
     <>
-      {mostrarModal && (
+      {mostrarModal && planoSelecionado && (
         <div
           style={{
             position: 'fixed',
@@ -77,6 +84,7 @@ function EscolherPlanoCadastro() {
               maxWidth: '400px',
               width: '90%',
               textAlign: 'center',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
             }}
           >
             <h2
@@ -89,31 +97,28 @@ function EscolherPlanoCadastro() {
               Confirmar Plano
             </h2>
             <p>
-              Você selecionou o plano <strong>{planoSelecionado}</strong>.
+              Você selecionou o plano <strong>{planoSelecionado.nome}</strong>
             </p>
             <p>
-              {planoSelecionado === 'teste_gratis'
-                ? 'Esse plano é gratuito por 7 dias.'
-                : `Valor: R$ ${valoresPlano[planoSelecionado].toFixed(2)} / mês`}
+              Valor: R$
+              {valoresPlano[planoSelecionado.id]
+                .toFixed(2)
+                .replace('.', ',')}{' '}
+              / mês
             </p>
-            {planoSelecionado !== 'teste_gratis' && (
-              <select
-                value={formaPagamento}
-                onChange={(e) => setFormaPagamento(e.target.value)}
-                style={{
+            <Select
+              options={opcoesPagamento}
+              value={opcoesPagamento.find((o) => o.value === formaPagamento)}
+              onChange={(opt) => setFormaPagamento(opt.value)}
+              placeholder="Forma de pagamento"
+              styles={{
+                control: (base) => ({
+                  ...base,
                   marginTop: '10px',
-                  padding: '8px',
                   borderRadius: '10px',
-                  border: '1px solid #ccc',
-                  width: '100%',
-                }}
-              >
-                <option value="">Escolha a forma de pagamento</option>
-                <option value="pix">Pix</option>
-                <option value="boleto">Boleto</option>
-                <option value="cartao">Cartão</option>
-              </select>
-            )}
+                }),
+              }}
+            />
             <div
               style={{
                 marginTop: '20px',
@@ -135,12 +140,12 @@ function EscolherPlanoCadastro() {
               </button>
               <button
                 onClick={() => {
-                  if (planoSelecionado !== 'teste_gratis' && !formaPagamento) {
+                  if (!formaPagamento) {
                     alert('Selecione uma forma de pagamento');
                     return;
                   }
                   const queryParams = new URLSearchParams({
-                    plano: planoSelecionado,
+                    plano: planoSelecionado.nome,
                     pagamento: formaPagamento,
                   }).toString();
                   navegar(`/cadastro?${queryParams}`);
@@ -178,7 +183,8 @@ function EscolherPlanoCadastro() {
                 </ul>
                 <button
                   onClick={() => {
-                    setPlanoSelecionado(plano.id);
+                    setPlanoSelecionado(plano);
+                    setFormaPagamento('');
                     setMostrarModal(true);
                   }}
                   className="btn-escolher-moderno"

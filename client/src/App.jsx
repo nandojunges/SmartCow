@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Auth/Login';
 import Cadastro from './pages/Auth/Cadastro';
-import VerificarCodigo from './pages/Auth/VerificarCodigo';
+import VerificarEmail from './pages/Auth/VerificarEmail';
 import EsqueciSenha from './pages/Auth/EsqueciSenha';
 import Logout from './pages/Auth/Logout';
 import EscolherPlanoCadastro from './pages/Auth/EscolherPlanoCadastro';
@@ -14,7 +14,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/escolher-plano" element={<EscolherPlanoCadastro />} />
-        <Route path="/verificar-codigo" element={<VerificarCodigo />} />
+        <Route path="/verificar-email" element={<VerificarEmail />} />
         <Route path="/recuperar" element={<EsqueciSenha />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/dashboard" element={<div>Login funcionou</div>} />
