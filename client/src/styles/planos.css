@@ -86,21 +86,3 @@
   display: flex;
   gap: 12px;
 }
-
-.faixa-superior {
-  width: 100%;
-  height: 8px;
-  border-radius: 8px 8px 0 0;
-}
-
-.titulo {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.preco {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 8px 0;
-}
