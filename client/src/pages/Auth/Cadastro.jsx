@@ -56,8 +56,9 @@ function Cadastro() {
         plano,
         formaPagamento: formaPagamento?.value,
       };
-      const { data } = await api.post('/auth/cadastro', payload);
-      localStorage.setItem('usuarioCadastro', JSON.stringify(data));
+      await api.post('/auth/register', payload);
+      localStorage.setItem('emailCadastro', email);
+      localStorage.setItem('dadosCadastro', JSON.stringify(payload));
       navigate('/verificar-codigo');
     } catch {
       setErro('Erro no cadastro');
