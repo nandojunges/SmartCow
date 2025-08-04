@@ -8,9 +8,11 @@ import CarrosselLogos from "../../components/CarrosselLogos";
 
 function Cadastro() {
   const [searchParams] = useSearchParams();
-  const plano = searchParams.get('plano');
+  const planoParam = searchParams.get('plano');
+  const pagamentoParam = searchParams.get('pagamento');
   const navigate = useNavigate();
 
+  const [plano] = useState(planoParam || '');
   const [nome, setNome] = useState('');
   const [nomeFazenda, setNomeFazenda] = useState('');
   const [email, setEmail] = useState('');
@@ -19,7 +21,7 @@ function Cadastro() {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
-  const [formaPagamento, setFormaPagamento] = useState(null);
+  const [formaPagamento, setFormaPagamento] = useState(pagamentoParam || '');
   const [erro, setErro] = useState('');
 
   useEffect(() => {
@@ -34,7 +36,7 @@ function Cadastro() {
     if (senha.length < 6) return 'A senha deve ter no mínimo 6 caracteres';
     const tel = telefone.replace(/\D/g, '');
     if (tel.length < 10) return 'Telefone inválido';
-    if (plano !== 'teste_gratis' && !formaPagamento) return 'Selecione uma forma de pagamento';
+    if (plano !== 'Teste Grátis' && !formaPagamento) return 'Selecione uma forma de pagamento';
     return '';
   };
 
@@ -54,21 +56,20 @@ function Cadastro() {
         telefone,
         senha,
         plano,
-        formaPagamento: formaPagamento?.value,
+        formaPagamento,
       };
-      await api.post('/auth/register', payload);
-      localStorage.setItem('emailCadastro', email);
-      localStorage.setItem('dadosCadastro', JSON.stringify(payload));
-      navigate('/verificar-codigo');
+      await api.post('/auth/cadastrar', payload);
+      await api.post('/auth/enviar-codigo', { email });
+      navigate(`/verificar-email?email=${encodeURIComponent(email)}`);
     } catch {
       setErro('Erro no cadastro');
     }
   };
 
   const formasPagamento = [
-    { value: 'cartao', label: 'Cartão de crédito' },
-    { value: 'boleto', label: 'Boleto' },
     { value: 'pix', label: 'Pix' },
+    { value: 'boleto', label: 'Boleto' },
+    { value: 'cartao', label: 'Cartão' },
   ];
 
   const inputStyle = {
@@ -193,11 +194,11 @@ function Cadastro() {
             {mostrarConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
-        {plano !== 'teste_gratis' && (
+        {plano !== 'Teste Grátis' && !pagamentoParam && (
           <Select
             options={formasPagamento}
-            value={formaPagamento}
-            onChange={setFormaPagamento}
+            value={formasPagamento.find((o) => o.value === formaPagamento)}
+            onChange={(opt) => setFormaPagamento(opt.value)}
             placeholder="Forma de pagamento"
             styles={{
               control: (base) => ({
