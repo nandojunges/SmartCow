@@ -89,7 +89,7 @@ export default function Login() {
         minHeight: '100vh',
         width: '100%',
         overflow: 'hidden',
-         backgroundImage: "url('icones/telafundo.png')",
+        backgroundImage: "url('/icones/telafundo.png')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -120,7 +120,7 @@ export default function Login() {
             marginBottom: '5px',
           }}
         >
-         SmartMilk – GESTÃO LEITEIRA
+         SmartMilk - GESTÃO LEITEIRA
         </h1>
         <h2
           style={{
@@ -145,14 +145,14 @@ export default function Login() {
           marginTop: '120px',
         }}
       >
-        <motion.div
-          style={{ flex: 1 }}
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
-        >
-           <CarrosselLogos /> {/* ou o componente novo que você usa agora */}
-        </motion.div>
+          <motion.div
+            style={{ flex: 1 }}
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2, ease: 'easeOut' }}
+          >
+            <CarrosselLogos />
+          </motion.div>
 
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <motion.div
@@ -192,10 +192,11 @@ export default function Login() {
                    <div style={{ position: 'relative' }}>
                     <input
                       type="email"
+                      className="input-senha"
                       placeholder="Digite seu e-mail"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                       style={{
+                      style={{
                         width: '100%',
                         padding: '12px',
                         borderRadius: '20px',
@@ -211,10 +212,11 @@ export default function Login() {
                    <div style={{ position: 'relative' }}>
                     <input
                       type={mostrarSenha ? 'text' : 'password'}
+                      className="input-senha"
                       placeholder="Digite sua senha"
                       value={senha}
                       onChange={(e) => setSenha(e.target.value)}
-                       style={{
+                      style={{
                         width: '100%',
                         padding: '12px 40px 12px 12px',
                         borderRadius: '20px',
