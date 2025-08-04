@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-importar { movimento, AnimatePresence } de 'framer-motion' ;
-exportar função padrão CarrosselLogos ( ) {
+import { motion, AnimatePresence } from 'framer-motion';
+export default function CarrosselLogos() {
    
   const [infos, setInfos] = useState ([]);
   const [índice, setIndice] = useState ( 0 );
