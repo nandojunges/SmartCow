@@ -90,6 +90,15 @@ function Cadastro() {
     padding: 0,
   };
 
+  const camposValidos =
+    nome &&
+    nomeFazenda &&
+    email &&
+    telefone &&
+    senha &&
+    confirmarSenha &&
+    (plano === 'Teste Grátis' || formaPagamento);
+
   return (
     <div
       style={{
@@ -211,19 +220,24 @@ function Cadastro() {
         )}
         <button
           type="submit"
+          disabled={!camposValidos}
           style={{
-            backgroundColor: '#1e3a8a',
+            backgroundColor: camposValidos ? '#1e3a8a' : '#9ca3af',
             color: '#fff',
             border: 'none',
             borderRadius: '30px',
             padding: '10px',
             width: '60%',
             margin: '20px auto 0',
-            cursor: 'pointer',
+            cursor: camposValidos ? 'pointer' : 'not-allowed',
             transition: 'background 0.3s',
           }}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = '#2563eb')}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = '#1e3a8a')}
+          onMouseEnter={(e) =>
+            camposValidos && (e.target.style.backgroundColor = '#2563eb')
+          }
+          onMouseLeave={(e) =>
+            (e.target.style.backgroundColor = camposValidos ? '#1e3a8a' : '#9ca3af')
+          }
         >
           Cadastrar
         </button>
