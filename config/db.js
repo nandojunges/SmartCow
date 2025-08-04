@@ -1,3 +1,5 @@
+require('dotenv').config(); // Carrega as variáveis de ambiente
+
 const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize(
@@ -8,7 +10,7 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: 'postgres',
-    logging: false,
+    logging: false, // Coloque true se quiser ver as queries no console
   }
 );
 
