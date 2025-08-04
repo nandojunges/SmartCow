@@ -4,9 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { jwtDecode } from 'jwt-decode';
 import api from '../../api';
-
-// Placeholder: substitua pelo componente real quando estiver disponível
-const LoginInfoRotativo = () => <div />;
+import CarrosselLogos from '../../components/CarrosselLogos';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -15,7 +13,14 @@ function Login() {
   const [lembrar, setLembrar] = useState(false);
   const [errors, setErrors] = useState({});
   const [hover, setHover] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const salvo = localStorage.getItem('rememberedEmail');
@@ -53,7 +58,8 @@ function Login() {
       style={{
         minHeight: '100vh',
         display: 'flex',
-        backgroundImage: "url('/icones/telafundo.png')",
+        flexDirection: isMobile ? 'column' : 'row',
+        backgroundImage: "url('/telafundo.png')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         fontFamily: "'Poppins', sans-serif",
@@ -67,11 +73,21 @@ function Login() {
         style={{
           flex: 1,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
+          textAlign: 'center',
+          color: '#fff',
+          padding: '20px',
         }}
       >
-        <LoginInfoRotativo />
+        <h1 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '10px' }}>
+          Bem-vindo ao Gestão Leiteira
+        </h1>
+        <p style={{ fontSize: '1.2rem', maxWidth: '420px', marginBottom: '20px' }}>
+          Plataforma completa para facilitar a gestão da sua produção de leite.
+        </p>
+        <CarrosselLogos />
       </motion.div>
       <motion.div
         initial={{ opacity: 0, x: 50 }}
@@ -82,12 +98,13 @@ function Login() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          padding: '20px',
         }}
       >
         <form
           onSubmit={handleSubmit}
           style={{
-            backgroundColor: 'rgba(255,255,255,0.7)',
+            backgroundColor: 'rgba(255,255,255,0.8)',
             borderRadius: '12px',
             padding: '40px',
             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
@@ -98,19 +115,11 @@ function Login() {
             gap: '16px',
           }}
         >
-          <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: '3rem', fontWeight: 700 }}>
-              SmartMilk – GESTÃO LEITEIRA
+          <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>
+              Bem-vindo ao SmartMilk!
             </h1>
-            <p
-              style={{
-                fontFamily: "'Dancing Script', cursive",
-                fontSize: '2rem',
-                color: '#ffd43b',
-              }}
-            >
-              Feito por quem vive no campo.
-            </p>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 500 }}>Login</h2>
           </div>
           <div>
             <input
