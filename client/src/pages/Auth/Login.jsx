@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import jwt_decode from 'jwt-decode';
 import api from '../../api';
-import LoginInfoRotativo from '../../components/LoginInfoRotativo';
+import CarrosselLogos from '../../components/CarrosselLogos';
 
 export default function Login() {
   const [email, setEmail] = useState('');
