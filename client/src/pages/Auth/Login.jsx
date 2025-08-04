@@ -66,7 +66,7 @@ export default function Login() {
         } else {
           localStorage.removeItem('rememberEmail');
         }
-        const decoded = jwt_decode(token);
+        const decoded = jwtDecode(token);
         const isAdmin = decoded?.perfil === 'admin';
         navigate(isAdmin ? '/admin' : '/inicio');
       } else {
@@ -89,7 +89,7 @@ export default function Login() {
         minHeight: '100vh',
         width: '100%',
         overflow: 'hidden',
-        backgroundImage: "url('/icones/telafundo.png')",
+         backgroundImage: "url('icones/telafundo.png')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -120,7 +120,7 @@ export default function Login() {
             marginBottom: '5px',
           }}
         >
-          SmartMilk - GESTÃO LEITEIRA
+         SmartMilk – GESTÃO LEITEIRA
         </h1>
         <h2
           style={{
@@ -189,13 +189,18 @@ export default function Login() {
               <form onSubmit={handleSubmit} onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)} className="flex flex-col gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <div className="input-senha-container">
+                   <div style={{ position: 'relative' }}>
                     <input
                       type="email"
                       placeholder="Digite seu e-mail"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="input-senha"
+                       style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '20px',
+                        border: '1px solid #ccc',
+                      }}
                     />
                   </div>
                   {erroEmail && <p className="text-red-600 text-sm mt-1">{erroEmail}</p>}
@@ -203,15 +208,32 @@ export default function Login() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-                  <div className="input-senha-container">
+                   <div style={{ position: 'relative' }}>
                     <input
                       type={mostrarSenha ? 'text' : 'password'}
                       placeholder="Digite sua senha"
                       value={senha}
                       onChange={(e) => setSenha(e.target.value)}
-                      className="input-senha input-senha-olho"
+                       style={{
+                        width: '100%',
+                        padding: '12px 40px 12px 12px',
+                        borderRadius: '20px',
+                        border: '1px solid #ccc',
+                      }}
                     />
-                    <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="botao-olho">
+                     <button
+                      type="button"
+                      onClick={() => setMostrarSenha(!mostrarSenha)}
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        right: '12px',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
                       {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
