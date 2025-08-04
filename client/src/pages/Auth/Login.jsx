@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import api from '../../api';
-import CarrosselLogos from '../../components/CarrosselLogos';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -96,193 +95,180 @@ export default function Login() {
         display: 'flex',
         flexDirection: 'column',
         fontFamily: "'Inter', 'Poppins', sans-serif",
-        position: 'relative',
       }}
     >
       <div
         style={{
-          position: 'absolute',
-          top: '40px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          textAlign: 'center',
-          color: '#fff',
-          textShadow: '0 1px 4px rgba(0,0,0,0.5)',
-          zIndex: 5,
-        }}
-      >
-        <h1
-          style={{
-            fontFamily: "'Poppins', sans-serif",
-            fontSize: '3rem',
-            fontWeight: 700,
-            margin: 0,
-            marginBottom: '5px',
-          }}
-        >
-         SmartMilk - GESTÃO LEITEIRA
-        </h1>
-        <h2
-          style={{
-            fontFamily: "'Dancing Script', cursive",
-            fontSize: '2rem',
-            fontWeight: 500,
-            color: '#ffd43b',
-            textShadow: '1px 1px 3px rgba(0,0,0,0.4)',
-            margin: 0,
-          }}
-        >
-          Feito por quem vive no campo.
-        </h2>
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          width: '100%',
           flex: 1,
-          marginTop: '120px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px',
         }}
       >
-          <motion.div
-            style={{ flex: 1 }}
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2, ease: 'easeOut' }}
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+        >
+          <div
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.85)',
+              padding: '40px',
+              borderRadius: '16px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              width: '100%',
+              maxWidth: '350px',
+            }}
           >
-            <CarrosselLogos />
-          </motion.div>
-
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <motion.div
-            initial={{ opacity: 0, x: -100 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1.2, ease: 'easeOut' }}
-          >
-            <div
+            <p
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                padding: '40px',
-                borderRadius: '20px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                maxWidth: '500px',
-                width: '100%',
+                fontSize: '1.5rem',
+                fontWeight: 600,
+                fontFamily: "'Poppins', sans-serif",
+                marginBottom: '8px',
+                textAlign: 'center',
               }}
             >
-              <p
+              Bem-vindo ao SmartMilk!
+            </p>
+
+            <h2
+              style={{
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                color: '#1e3a8a',
+                textAlign: 'center',
+                marginBottom: '20px',
+              }}
+            >
+              Login
+            </h2>
+
+            <form
+              onSubmit={handleSubmit}
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px',
+                width: '100%',
+                maxWidth: '350px',
+              }}
+            >
+              <div style={{ width: '100%' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  className="input-login"
+                  placeholder="Digite seu e-mail"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                {erroEmail && (
+                  <p className="text-red-600 text-sm mt-1">{erroEmail}</p>
+                )}
+              </div>
+
+              <div style={{ width: '100%' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Senha
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={mostrarSenha ? 'text' : 'password'}
+                    className="input-login"
+                    placeholder="Digite sua senha"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha(!mostrarSenha)}
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      right: '12px',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {erroSenha && (
+                  <p className="text-red-600 text-sm mt-1">{erroSenha}</p>
+                )}
+              </div>
+
+              <div
                 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 600,
-                  fontFamily: "'Poppins', sans-serif",
-                  marginBottom: '10px',
-                  textAlign: 'center',
+                  alignSelf: 'flex-start',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
               >
-                Bem-vindo ao SmartMilk!
-              </p>
+                <input
+                  id="lembrar"
+                  type="checkbox"
+                  checked={lembrar}
+                  onChange={(e) => setLembrar(e.target.checked)}
+                />
+                <label htmlFor="lembrar" className="text-sm">
+                  Lembrar-me
+                </label>
+              </div>
 
-              <h2 className="text-xl font-bold text-center mb-4" style={{ color: '#1e3a8a' }}>
-                Login
-              </h2>
+              <button
+                type="submit"
+                style={{
+                  background: 'linear-gradient(90deg, #1e3a8a, #3b82f6)',
+                  color: '#fff',
+                  fontWeight: '700',
+                  borderRadius: '20px',
+                  border: 'none',
+                  height: '45px',
+                  width: '100%',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                }}
+              >
+                Entrar
+              </button>
 
-              <form onSubmit={handleSubmit} onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)} className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                   <div style={{ position: 'relative' }}>
-                    <input
-                      type="email"
-                      className="input-senha"
-                      placeholder="Digite seu e-mail"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '20px',
-                        border: '1px solid #ccc',
-                      }}
-                    />
-                  </div>
-                  {erroEmail && <p className="text-red-600 text-sm mt-1">{erroEmail}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-                   <div style={{ position: 'relative' }}>
-                    <input
-                      type={mostrarSenha ? 'text' : 'password'}
-                      className="input-senha"
-                      placeholder="Digite sua senha"
-                      value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '12px 40px 12px 12px',
-                        borderRadius: '20px',
-                        border: '1px solid #ccc',
-                      }}
-                    />
-                     <button
-                      type="button"
-                      onClick={() => setMostrarSenha(!mostrarSenha)}
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        right: '12px',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  {erroSenha && <p className="text-red-600 text-sm mt-1">{erroSenha}</p>}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input id="lembrar" type="checkbox" checked={lembrar} onChange={(e) => setLembrar(e.target.checked)} />
-                  <label htmlFor="lembrar" className="text-sm">Lembrar-me</label>
-                </div>
-
-                <button
-                  type="submit"
+              <div style={{ textAlign: 'center', marginTop: '4px' }}>
+                <Link
+                  to="/esqueci-senha"
                   style={{
-                    background: 'linear-gradient(90deg, #1e3a8a, #3b82f6)',
-                    color: '#fff',
-                    padding: '12px 24px',
-                    borderRadius: '30px',
-                    border: 'none',
-                    fontSize: '1.1rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                    color: '#6f42c1',
+                    fontSize: '0.875rem',
+                    display: 'block',
+                    marginBottom: '4px',
                   }}
-                  onMouseOver={(e) => (e.target.style.background = '#1e40af')}
-                  onMouseOut={(e) => (e.target.style.background = 'linear-gradient(90deg, #1e3a8a, #3b82f6)')}
                 >
-                  Entrar
-                </button>
-
-                <div className="text-right">
-                  <Link to="/esqueci-senha" className="text-sm text-blue-600 hover:underline">
-                    Esqueceu a senha?
-                  </Link>
-                </div>
-              </form>
-
-              <p className="text-center text-sm text-gray-600 mt-4 font-light">
-                Não tem conta?{' '}
-                <Link to="/escolher-plano" className="text-blue-600 hover:underline">
+                  Esqueceu a senha?
+                </Link>
+                <Link
+                  to="/escolher-plano"
+                  style={{
+                    color: '#6f42c1',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                  }}
+                >
                   Cadastrar-se
                 </Link>
-              </p>
-            </div>
-          </motion.div>
-        </div>
+              </div>
+            </form>
+          </div>
+        </motion.div>
       </div>
 
       <footer
