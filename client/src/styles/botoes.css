@@ -1,0 +1,89 @@
+/* BOTÕES PADRÃO DO SISTEMA */
+
+/* Botão principal (Salvar, Confirmar etc) */
+.botao-acao {
+  background-color: #2563eb;
+  color: white;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.botao-acao:hover {
+  background-color: #1d4ed8;
+}
+.botao-acao:active {
+  transform: scale(0.98);
+}
+
+/* Botão cancelar */
+.botao-cancelar {
+  background-color: #f3f4f6;
+  color: #111827;
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  border-radius: 0.75rem;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.botao-cancelar:hover {
+  background-color: #e5e7eb;
+}
+.botao-cancelar:active {
+  transform: scale(0.98);
+}
+
+/* Botão pequeno (modais, ações rápidas) */
+.botao-acao.pequeno,
+.botao-cancelar.pequeno {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Botões de ação em tabela */
+.btn-editar {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.btn-editar:hover {
+  background-color: #0069d9;
+}
+
+.btn-excluir {
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.btn-excluir:hover {
+  background-color: #c82333;
+}
+
+.btn-registrar {
+  background-color: #4dabf7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.btn-registrar:hover {
+  background-color: #339af0;
+}
