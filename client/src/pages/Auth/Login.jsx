@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from 'jwt-decode';
 import api from '../../api';
 
 // Placeholder: substitua pelo componente real quando estiver disponível
@@ -14,6 +14,7 @@ function Login() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [lembrar, setLembrar] = useState(false);
   const [errors, setErrors] = useState({});
+  const [hover, setHover] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,11 +27,11 @@ function Login() {
 
   const validar = () => {
     const e = {};
-    if (!email) e.email = 'Informe o email';
-    if (!senha) e.senha = 'Informe a senha';
+    if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Email inválido';
+    if (!senha) e.senha = 'Senha obrigatória';
     setErrors(e);
     return Object.keys(e).length === 0;
-    };
+  };
 
   const handleSubmit = async (ev) => {
     ev.preventDefault();
@@ -43,7 +44,7 @@ function Login() {
       const user = jwtDecode(data.token);
       navigate(user?.perfil === 'admin' ? '/admin' : '/inicio');
     } catch {
-      setErrors({ form: 'Credenciais inválidas' });
+      alert('Credenciais inválidas');
     }
   };
 
@@ -52,68 +53,65 @@ function Login() {
       style={{
         minHeight: '100vh',
         display: 'flex',
-        flexDirection: 'column',
         backgroundImage: "url('/icones/telafundo.png')",
         backgroundSize: 'cover',
-        fontFamily: 'Poppins',
+        backgroundPosition: 'center',
+        fontFamily: "'Poppins', sans-serif",
+        position: 'relative',
       }}
     >
-      <header
-        style={{
-          textAlign: 'center',
-          padding: '24px 0',
-          backgroundColor: 'rgba(255,255,255,0.7)',
-        }}
-      >
-        <h1 style={{ fontSize: '24px', fontWeight: 700 }}>
-          SmartMilk - GESTÃO LEITEIRA
-        </h1>
-        <p style={{ fontSize: '20px', fontFamily: 'Dancing Script' }}>
-          Bem-vindo
-        </p>
-      </header>
-      <main
+      <motion.div
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
         style={{
           flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '32px',
-          padding: '16px',
         }}
       >
-        <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+        <LoginInfoRotativo />
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <form
+          onSubmit={handleSubmit}
           style={{
             backgroundColor: 'rgba(255,255,255,0.7)',
             borderRadius: '12px',
-            padding: '24px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            maxWidth: '300px',
-            width: '100%',
-          }}
-        >
-          <LoginInfoRotativo />
-        </motion.div>
-        <motion.form
-          onSubmit={handleSubmit}
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.8)',
-            borderRadius: '12px',
-            padding: '32px',
+            padding: '40px',
             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
             width: '100%',
-            maxWidth: '320px',
+            maxWidth: '420px',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
           }}
         >
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: '3rem', fontWeight: 700 }}>
+              SmartMilk – GESTÃO LEITEIRA
+            </h1>
+            <p
+              style={{
+                fontFamily: "'Dancing Script', cursive",
+                fontSize: '2rem',
+                color: '#ffd43b',
+              }}
+            >
+              Feito por quem vive no campo.
+            </p>
+          </div>
           <div>
             <input
               type="email"
@@ -166,11 +164,6 @@ function Login() {
               <p style={{ color: 'red', fontSize: '12px' }}>{errors.senha}</p>
             )}
           </div>
-          {errors.form && (
-            <p style={{ color: 'red', fontSize: '12px', textAlign: 'center' }}>
-              {errors.form}
-            </p>
-          )}
           <div
             style={{
               display: 'flex',
@@ -187,18 +180,23 @@ function Login() {
               />
               Lembrar-me
             </label>
-            <Link to="/recuperar">esqueceu a senha?</Link>
+            <Link to="/recuperar">Esqueceu a senha?</Link>
           </div>
           <button
             type="submit"
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
             style={{
-              background: 'linear-gradient(90deg,#4facfe,#00f2fe)',
+              background: hover
+                ? 'linear-gradient(90deg, #1e3a8a, #2563eb)'
+                : 'linear-gradient(90deg, #1e3a8a, #3b82f6)',
               color: '#fff',
               padding: '10px',
               border: 'none',
-              borderRadius: '9999px',
+              borderRadius: '30px',
               cursor: 'pointer',
               fontWeight: 600,
+              transition: 'background 0.3s',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}
           >
@@ -207,10 +205,14 @@ function Login() {
           <p style={{ textAlign: 'center', fontSize: '14px' }}>
             Não tem conta? <Link to="/escolher-plano">Cadastre-se</Link>
           </p>
-        </motion.form>
-      </main>
+        </form>
+      </motion.div>
       <footer
         style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          width: '100%',
           textAlign: 'center',
           padding: '16px 0',
           backgroundColor: 'rgba(255,255,255,0.7)',
