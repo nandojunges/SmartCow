@@ -4,6 +4,7 @@ import Cadastro from './pages/Auth/Cadastro';
 import VerificarEmail from './pages/Auth/VerificarEmail';
 import EsqueciSenha from './pages/Auth/EsqueciSenha';
 import Logout from './pages/Auth/Logout';
+import EscolherPlanoCadastro from './pages/EscolherPlanoCadastro';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
+        <Route path="/escolher-plano" element={<EscolherPlanoCadastro />} />
         <Route path="/verificar" element={<VerificarEmail />} />
         <Route path="/recuperar" element={<EsqueciSenha />} />
         <Route path="/logout" element={<Logout />} />
