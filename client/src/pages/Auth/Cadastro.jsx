@@ -4,6 +4,7 @@ import Select from 'react-select';
 import InputMask from 'react-input-mask';
 import { Eye, EyeOff } from 'lucide-react';
 import api from '../../api';
+import FrasesRotativas from '../../components/FrasesRotativas';
 
 function Cadastro() {
   const [searchParams] = useSearchParams();
@@ -116,6 +117,9 @@ function Cadastro() {
           gap: '16px',
         }}
       >
+        <h2 style={{ textAlign: 'center' }}>SmartMilk</h2>
+        <p className="text-center text-sm text-gray-600">Bem-vindo ao Gestão Leiteira</p>
+        <FrasesRotativas />
         {erro && (
           <p style={{ color: 'red', textAlign: 'center', marginBottom: '8px' }}>{erro}</p>
         )}
