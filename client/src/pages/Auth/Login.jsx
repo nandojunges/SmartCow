@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import jwt_decode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import api from '../../api';
-import LoginInfoRotativo from '../../components/LoginInfoRotativo';
+import CarrosselLogos from '../../components/CarrosselLogos';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -151,7 +151,7 @@ export default function Login() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.2, ease: 'easeOut' }}
         >
-          <LoginInfoRotativo />
+           <CarrosselLogos /> {/* ou o componente novo que você usa agora */}
         </motion.div>
 
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -275,4 +275,3 @@ export default function Login() {
     </div>
   );
 }
-
