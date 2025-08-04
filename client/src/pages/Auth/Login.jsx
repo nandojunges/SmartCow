@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import jwtDecode from 'jwt-decode';
 import api from '../../api';
+import FrasesRotativas from '../../components/FrasesRotativas';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,8 @@ export default function Login() {
   const [lembrar, setLembrar] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
     try {
       const response = await api.post('/auth/login', { email, senha });
       const token = response.data.token;
@@ -24,125 +26,111 @@ export default function Login() {
     }
   };
 
+  const inputStyle = {
+    width: '100%',
+    padding: '10px',
+    borderRadius: '8px',
+    border: '1px solid #ccc',
+  };
+
+  const iconButtonStyle = {
+    position: 'absolute',
+    right: '10px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+  };
+
   return (
     <div
       style={{
-        backgroundImage: "url('/telafundo.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
         minHeight: '100vh',
+        width: '100%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '40px',
-        flexDirection: 'column',
-        position: 'relative'
+        backgroundImage: "url('/icones/telafundo.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        margin: 0,
+        padding: 0,
       }}
     >
-      <div style={{
-        display: 'flex',
-        gap: '40px',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '20px',
-        padding: '30px',
-        backdropFilter: 'blur(4px)'
-      }}>
-        {/* Bloco esquerdo com texto informativo */}
-        <div style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.92)',
-          borderRadius: '15px',
-          padding: '20px',
-          width: '340px',
+      <form
+        onSubmit={handleLogin}
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.85)',
+          padding: '40px',
+          borderRadius: '20px',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+          maxWidth: '400px',
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <h2 style={{ marginBottom: '8px' }}>Bem-vindo ao Gestão Leiteira</h2>
-          <p style={{ fontSize: '14px', textAlign: 'center' }}>
-            O sistema que organiza sua fazenda de leite, com controle total de rebanho, reprodução e produtividade.
-          </p>
-        </div>
-
-        {/* Bloco direito com o formulário de login */}
-        <div style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.92)',
-          borderRadius: '15px',
-          padding: '20px',
-          width: '340px',
-        }}>
-          <h2 style={{ textAlign: 'center' }}>SmartMilk</h2>
-          <p style={{ textAlign: 'center', fontWeight: 'bold', color: '#444' }}>Acesso ao Sistema</p>
-
+          gap: '16px',
+        }}
+      >
+        <h2 style={{ textAlign: 'center' }}>SmartMilk</h2>
+        <p className="text-center text-sm text-gray-600">Bem-vindo ao Gestão Leiteira</p>
+        <FrasesRotativas />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="E-mail"
+          style={inputStyle}
+        />
+        <div style={{ position: 'relative' }}>
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ width: '100%', marginTop: 10, padding: 10 }}
+            type={mostrarSenha ? 'text' : 'password'}
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            placeholder="Senha"
+            style={{ ...inputStyle, paddingRight: '40px' }}
           />
-
-          <div style={{ position: 'relative', marginTop: 10 }}>
-            <input
-              type={mostrarSenha ? 'text' : 'password'}
-              placeholder="Senha"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              style={{ width: '100%', padding: 10 }}
-            />
-            <div
-              onClick={() => setMostrarSenha(!mostrarSenha)}
-              style={{ position: 'absolute', top: 12, right: 10, cursor: 'pointer' }}
-            >
-              {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
-            </div>
-          </div>
-
-          <label style={{ display: 'flex', alignItems: 'center', marginTop: 10 }}>
-            <input
-              type="checkbox"
-              checked={lembrar}
-              onChange={(e) => setLembrar(e.target.checked)}
-            />
-            <span style={{ marginLeft: 8 }}>Lembrar-me</span>
-          </label>
-
           <button
-            onClick={handleLogin}
-            style={{
-              marginTop: 15,
-              background: '#2563EB',
-              color: '#fff',
-              padding: '10px 20px',
-              border: 'none',
-              borderRadius: '8px',
-              width: '100%',
-              cursor: 'pointer'
-            }}
+            type="button"
+            onClick={() => setMostrarSenha((s) => !s)}
+            style={iconButtonStyle}
           >
-            Entrar
+            {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
-
-          <div style={{ marginTop: 10, fontSize: 14 }}>
-            <Link to="/recuperar">Esqueceu a senha?</Link><br />
-            Não tem conta? <Link to="/cadastro">Cadastrar-se</Link>
-          </div>
         </div>
-      </div>
-
-      {/* Rodapé com versão */}
-      <footer style={{
-        position: 'absolute',
-        bottom: 10,
-        width: '100%',
-        textAlign: 'center',
-        color: '#fff',
-        fontSize: 14
-      }}>
-        Versão 1.0.0 | © Gestão Leiteira 2025
-      </footer>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+          <input
+            type="checkbox"
+            checked={lembrar}
+            onChange={(e) => setLembrar(e.target.checked)}
+          />
+          <span>Lembrar-me</span>
+        </label>
+        <button
+          type="submit"
+          style={{
+            backgroundColor: '#1e3a8a',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '30px',
+            padding: '10px',
+            width: '60%',
+            margin: '20px auto 0',
+            cursor: 'pointer',
+            transition: 'background 0.3s',
+          }}
+          onMouseEnter={(e) => (e.target.style.backgroundColor = '#2563eb')}
+          onMouseLeave={(e) => (e.target.style.backgroundColor = '#1e3a8a')}
+        >
+          Entrar
+        </button>
+        <div style={{ textAlign: 'center', fontSize: '14px' }}>
+          <Link to="/recuperar">Esqueceu a senha?</Link>
+          <br />
+          Não tem conta? <Link to="/cadastro">Cadastrar-se</Link>
+        </div>
+      </form>
     </div>
   );
 }
