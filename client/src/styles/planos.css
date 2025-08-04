@@ -68,3 +68,22 @@
   justify-content: center;
   gap: 12px;
 }
+.painel-pagamento {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.select-pagamento {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.botoes-pagamento {
+  display: flex;
+  gap: 12px;
+}
+
