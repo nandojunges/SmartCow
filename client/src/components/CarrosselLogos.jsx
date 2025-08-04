@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+
 export default function CarrosselLogos() {
-   
-  const [infos, setInfos] = useState ([]);
-  const [índice, setIndice] = useState ( 0 );
-  const [ visivel, setVisivel] = useState ( verdadeiro);
+  const [infos, setInfos] = useState([]);
+  const [indice, setIndice] = useState(0); // corrigido
+  const [visivel, setVisivel] = useState(true);
+
   useEffect(() => {
-  async function carregarArquivos() {
+    async function carregarArquivos() {
       const arquivos = ['01.txt', '02.txt', '03.txt'];
       const promessas = arquivos.map(async (nome) => {
         const resp = await fetch(`/data/rotativos/${nome}`);
@@ -41,6 +42,7 @@ export default function CarrosselLogos() {
   }, [indice, infos]);
 
   const item = infos[indice] || {};
+
   return (
     <div
       style={{
@@ -51,7 +53,7 @@ export default function CarrosselLogos() {
         justifyContent: 'center',
       }}
     >
-     <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait">
         {visivel && (
           <motion.div
             key={indice}
