@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from "jwt-decode";
 import api from '../../api';
 
 // Placeholder: substitua pelo componente real quando estiver disponível
