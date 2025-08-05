@@ -10,8 +10,8 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Rotas
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+const authRoutes = require('./routes/authRoutes');
+app.use('/auth', authRoutes);
 
 // Rota teste
 app.get('/api', (req, res) => {
