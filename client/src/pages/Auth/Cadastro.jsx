@@ -4,6 +4,7 @@ import Select from 'react-select';
 import InputMask from 'react-input-mask';
 import { Eye, EyeOff } from 'lucide-react';
 import api from '../../api';
+import VerificacaoEmail from '../../components/VerificacaoEmail';
 import CarrosselLogos from "../../components/CarrosselLogos";
 
 function Cadastro() {
@@ -16,6 +17,7 @@ function Cadastro() {
   const [nome, setNome] = useState('');
   const [nomeFazenda, setNomeFazenda] = useState('');
   const [email, setEmail] = useState('');
+  const [verificado, setVerificado] = useState(false);
   const [telefone, setTelefone] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -59,8 +61,7 @@ function Cadastro() {
         formaPagamento,
       };
       await api.post('/auth/cadastrar', payload);
-      await api.post('/auth/enviar-codigo', { email });
-      navigate(`/verificar-email?email=${encodeURIComponent(email)}`);
+      navigate('/');
     } catch {
       setErro('Erro no cadastro');
     }
@@ -97,6 +98,7 @@ function Cadastro() {
     telefone &&
     senha &&
     confirmarSenha &&
+    verificado &&
     (plano === 'Teste Grátis' || formaPagamento);
 
   return (
@@ -148,12 +150,10 @@ function Cadastro() {
           placeholder="Nome da fazenda"
           style={inputStyle}
         />
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="E-mail"
-          style={inputStyle}
+        <VerificacaoEmail
+          email={email}
+          setEmail={setEmail}
+          onEmailVerificado={setVerificado}
         />
         <InputMask
           mask="(99) 99999-9999"
