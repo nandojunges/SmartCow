@@ -1,19 +1,18 @@
 async function criar(db, usuario) {
-  const query = `
+  const sql = `
     INSERT INTO usuarios (nome, email, nomeFazenda, telefone, senha, plano, formaPagamento)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
-  const valores = [
+  const vals = [
     usuario.nome,
     usuario.email,
-    usuario.nomeFazenda,
-    usuario.telefone,
+    usuario.nomeFazenda ?? null,
+    usuario.telefone ?? null,
     usuario.senha,
-    usuario.plano,
-    usuario.formaPagamento,
+    usuario.plano ?? null,
+    usuario.formaPagamento ?? null,
   ];
-
-  await db.run(query, valores);
+  await db.run(sql, vals);
 }
 
 module.exports = { criar };
