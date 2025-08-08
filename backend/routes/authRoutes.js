@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { cadastro, verificarEmail } = require('../controllers/authController');
+const { enviarCodigo, verificarCodigo } = require('../controllers/authController');
 
-router.post('/cadastro', cadastro);
-router.post('/verificarEmail', verificarEmail);
+// Compatível com chamadas do frontend
+router.post('/enviar-codigo', enviarCodigo);
+router.post('/verificar-codigo', verificarCodigo);
 
 module.exports = router;
