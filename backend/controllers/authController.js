@@ -73,8 +73,11 @@ async function enviarCodigo(req, res) {
     await emailUtils.enviarCodigo(email, codigo);
     return res.status(200).json({ ok: true, msg: 'Código enviado.' });
   } catch (err) {
-    console.error('Erro enviar-codigo:', err);
-    return res.status(500).json({ erro: 'Falha ao enviar código.' });
+    console.error('Erro enviar-codigo:', err?.message || err);
+    const tip = (!process.env.EMAIL_REMETENTE || !process.env.SENHA_REMETENTE)
+      ? 'Verifique server/.env (EMAIL_REMETENTE e SENHA_REMETENTE).'
+      : 'Se usa 2FA no Zoho, gere uma senha de app e use no SENHA_REMETENTE.';
+    return res.status(500).json({ erro: 'Falha ao enviar código.', dica: tip });
   }
 }
 
