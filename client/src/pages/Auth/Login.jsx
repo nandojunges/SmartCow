@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import jwt_decode from 'jwt-decode';
 import api from '../../api';
 import CarrosselLogos from '../../components/CarrosselLogos';
 
@@ -66,7 +66,7 @@ export default function Login() {
         } else {
           localStorage.removeItem('rememberEmail');
         }
-        const decoded = jwtDecode(token);
+        const decoded = jwt_decode(token);
         const isAdmin = decoded?.perfil === 'admin';
         navigate(isAdmin ? '/admin' : '/inicio');
       } else {
