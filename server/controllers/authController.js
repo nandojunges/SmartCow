@@ -1,11 +1,12 @@
 const bcrypt = require('bcryptjs');
-const emailUtils = require('../utils/email');
 const { initDB, getDBPath } = require('../db');
 const Usuario = require('../models/Usuario');
+const emailUtils = require('../utils/email');
+const fs = require('fs');
 
 const pendentes = new Map();
-const EXPIRA_MS = 10 * 60 * 1000; // 10 min
-const REENVIO_MS = 3 * 60 * 1000; // 3 min
+const EXPIRA_MS = 10 * 60 * 1000;
+const REENVIO_MS = 3 * 60 * 1000;
 
 function limpaExpirados() {
   const agora = Date.now();
@@ -18,39 +19,32 @@ function geraCodigo() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-/**
- * Compatível com o seu frontend:
- * POST /api/auth/enviar-codigo
- * Aceita:
- *  - Mínimo: { email }
- *  - Ideal:  { nome, nomeFazenda, email, telefone, senha, plano, formaPagamento }
- * Guarda o que vier no Map para uso na verificação.
+/** POST /api/auth/enviar-codigo
+ * Aceita só {email} ou todos os campos (nome, senha, etc.)
  */
 async function enviarCodigo(req, res) {
   try {
     limpaExpirados();
+
     const {
+      email,
       nome = null,
       nomeFazenda = null,
-      email,
       telefone = null,
       senha = null,
       plano = null,
-      formaPagamento = null,
+      formaPagamento = null
     } = req.body || {};
 
     if (!email || typeof email !== 'string') {
       return res.status(400).json({ erro: 'Email inválido.' });
     }
 
-    // Se já existe usuário com esse e-mail, bloqueia cadastro
-    const dbPath = getDBPath(email);
-    const fs = require('fs');
-    if (fs.existsSync(dbPath)) {
+    const dbPath = getDBPath ? getDBPath(email) : null;
+    if (dbPath && fs.existsSync(dbPath)) {
       return res.status(400).json({ erro: 'Email já cadastrado.' });
     }
 
-    // Anti-spam de reenvio
     const atual = pendentes.get(email);
     if (atual && Date.now() - atual.criado_em.getTime() < REENVIO_MS) {
       return res.status(429).json({ erro: 'Aguarde alguns minutos para reenviar o código.' });
@@ -64,28 +58,28 @@ async function enviarCodigo(req, res) {
       nome,
       nomeFazenda,
       telefone,
-      senha: hashSenha, // pode ser null se veio só email (preencha antes de confirmar)
+      senha: hashSenha,
       plano,
       formaPagamento,
-      criado_em: new Date(),
+      criado_em: new Date()
     });
 
     await emailUtils.enviarCodigo(email, codigo);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[DEV] Código de verificação', email, '=>', codigo);
+    }
     return res.status(200).json({ ok: true, msg: 'Código enviado.' });
   } catch (err) {
     console.error('Erro enviar-codigo:', err?.message || err);
     const tip = (!process.env.EMAIL_REMETENTE || !process.env.SENHA_REMETENTE)
       ? 'Verifique server/.env (EMAIL_REMETENTE e SENHA_REMETENTE).'
-      : 'Se usa 2FA no Zoho, gere uma senha de app e use no SENHA_REMETENTE.';
+      : 'Se usar 2FA no Zoho, gere senha de app e use no SENHA_REMETENTE.';
     return res.status(500).json({ erro: 'Falha ao enviar código.', dica: tip });
   }
 }
 
-/**
- * Compatível com o seu frontend:
- * POST /api/auth/verificar-codigo
- * Espera: { email, codigoDigitado, ...camposOpcionalmenteFaltantes }
- * Se no passo anterior você só enviou {email}, aqui você pode enviar os demais campos.
+/** POST /api/auth/verificar-codigo
+ * Espera { email, codigoDigitado } e, opcionalmente, dados faltantes
  */
 async function verificarCodigo(req, res) {
   try {
@@ -96,9 +90,9 @@ async function verificarCodigo(req, res) {
       nome,
       nomeFazenda,
       telefone,
-      senha, // se não veio no passo anterior, aceita aqui
+      senha,
       plano,
-      formaPagamento,
+      formaPagamento
     } = req.body || {};
 
     if (!email || typeof email !== 'string') {
@@ -121,23 +115,20 @@ async function verificarCodigo(req, res) {
       return res.status(400).json({ erro: 'Código incorreto.' });
     }
 
-    // Consolidar dados (permite completar campos aqui)
     const final = {
       nome: pend.nome ?? nome,
+      email,
       nomeFazenda: pend.nomeFazenda ?? nomeFazenda,
       telefone: pend.telefone ?? telefone,
-      email,
-      senha: pend.senha, // pode vir do passo 1
+      senha: pend.senha,
       plano: pend.plano ?? plano,
-      formaPagamento: pend.formaPagamento ?? formaPagamento,
+      formaPagamento: pend.formaPagamento ?? formaPagamento
     };
 
-    // Se a senha não foi enviada no passo 1, hashear agora
     if (!final.senha && senha) {
       final.senha = await bcrypt.hash(senha, 10);
     }
 
-    // Valida mínimos obrigatórios (ajuste conforme sua regra)
     if (!final.nome || !final.senha) {
       return res.status(400).json({ erro: 'Dados incompletos (nome e senha são obrigatórios).' });
     }
@@ -148,13 +139,9 @@ async function verificarCodigo(req, res) {
     pendentes.delete(email);
     return res.status(201).json({ ok: true, msg: 'Usuário cadastrado com sucesso.' });
   } catch (err) {
-    console.error('Erro verificar-codigo:', err);
+    console.error('Erro verificar-codigo:', err?.message || err);
     return res.status(500).json({ erro: 'Falha ao verificar e cadastrar.' });
   }
 }
 
-module.exports = {
-  enviarCodigo,
-  verificarCodigo,
-};
-
+module.exports = { enviarCodigo, verificarCodigo };
