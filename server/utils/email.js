@@ -1,10 +1,10 @@
 const nodemailer = require('nodemailer');
-// dotenv já carregado no index; aqui só usa process.env
 
 function ensureEnv(name) {
   const v = process.env[name];
   if (!v) {
-    throw new Error(`[CONFIG] Variável de ambiente ausente: ${name}. Crie server/.env e reinicie o server.`);
+    console.error(`[CONFIG] Faltando variável: ${name} (crie server/.env)`);
+    throw new Error(`ENV ausente: ${name}`);
   }
   return v;
 }
@@ -18,21 +18,17 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: {
     user: EMAIL_REMETENTE,
-    pass: SENHA_REMETENTE,
-  },
-});
-
-// Verifica conexão SMTP no boot (apenas log; não lançar erro)
-transporter.verify((err, success) => {
-  if (err) {
-    console.error('[SMTP] Falha na verificação:', err.message || err);
-  } else {
-    console.log('[SMTP] Conexão OK com Zoho.');
+    pass: SENHA_REMETENTE
   }
 });
 
+transporter.verify((err) => {
+  if (err) console.error('[SMTP] Falha verificação:', err.message || err);
+  else console.log('[SMTP] Conectado ao Zoho.');
+});
+
 async function enviarCodigo(destinatario, codigo) {
-  const mailOptions = {
+  await transporter.sendMail({
     from: EMAIL_REMETENTE,
     to: destinatario,
     subject: 'Código de Verificação - Gestão Leiteira',
@@ -43,10 +39,8 @@ async function enviarCodigo(destinatario, codigo) {
         <h1>${codigo}</h1>
         <p>Válido por 10 minutos.</p>
       </div>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
+    `
+  });
 }
 
 module.exports = { enviarCodigo };
