@@ -1002,3 +1002,86 @@ try {
 }
 
 export default router;
+
+/* =================== Decisões — últimas =================== */
+/**
+ * Lista últimas decisões (eventos tipo 'DECISAO')
+ * Aceita:
+ *   - limit: número de itens (default 20, máx 200)
+ *   - dias: filtra pelos últimos N dias (opcional)
+ *   - animal_id: filtra por um animal específico (opcional)
+ * Método: tanto POST (body JSON) quanto GET (query) funcionam.
+ * Endpoint: /api/v1/reproducao/decisoes/ultimas
+ */
+async function handlerUltimasDecisoes(req, res) {
+  try {
+    if (!EVT_TIPO || !EVT_DATA || !EVT_ANIM_COL) {
+      return res.status(501).json({ error: 'NotAvailable', detail: 'Tabela de eventos sem colunas esperadas (tipo/data/animal_id).' });
+    }
+
+    const uid = extractUserId(req);
+    if (HAS_OWNER_EVT && !uid) return res.status(401).json({ error: 'Unauthorized' });
+
+    const fromBody = req.method === 'POST' ? (req.body || {}) : {};
+    const limitRaw = fromBody.limit ?? req.query.limit ?? 20;
+    const diasRaw  = fromBody.dias  ?? req.query.dias  ?? null;
+    const animalId = fromBody.animal_id ?? req.query.animal_id ?? null;
+
+    let limit = parseInt(limitRaw, 10);
+    if (!Number.isFinite(limit) || limit <= 0) limit = 20;
+    if (limit > 200) limit = 200;
+
+    let dias = diasRaw == null ? null : parseInt(diasRaw, 10);
+    if (!Number.isFinite(dias) || dias <= 0) dias = null;
+
+    const where = [`e."${EVT_TIPO}" = 'DECISAO'`];
+    const params = [];
+
+    if (animalId) {
+      params.push(animalId);
+      where.push(`e."${EVT_ANIM_COL}" = $${params.length}`);
+    }
+
+    if (dias && dias > 0) {
+      where.push(`e."${EVT_DATA}" >= (CURRENT_DATE - INTERVAL '${dias} days')`);
+    }
+
+    if (HAS_OWNER_EVT && uid) {
+      params.push(uid);
+      where.push(`e.owner_id = $${params.length}`);
+    }
+
+    const selectFields = [
+      EVT_ID && `e."${EVT_ID}" AS id`,
+      `e."${EVT_ANIM_COL}" AS animal_id`,
+      `e."${EVT_DATA}" AS data`,
+      EVT_DETALHES && `e."${EVT_DETALHES}" AS detalhes`,
+      EVT_RESULT && `e."${EVT_RESULT}" AS resultado`,
+      HAS_CREATED_EVT && `e."created_at"`,
+      HAS_UPD_EVT && `e."updated_at"`,
+      ANIM_NUM && `a."${ANIM_NUM}" AS numero`,
+      ANIM_BRINC && `a."${ANIM_BRINC}" AS brinco`,
+    ].filter(Boolean).join(', ');
+
+    const joinAnimal = ANIM_ID_COL
+      ? `LEFT JOIN "${T_ANIM}" a ON a."${ANIM_ID_COL}" = e."${EVT_ANIM_COL}"`
+      : '';
+
+    const sql = `
+      SELECT ${selectFields}
+        FROM "${T_EVT}" e
+        ${joinAnimal}
+       WHERE ${where.join(' AND ')}
+    ORDER BY e."${EVT_DATA}" DESC ${HAS_CREATED_EVT ? ', e."created_at" DESC' : ''}
+       LIMIT ${limit};
+    `;
+
+    const { rows } = await db.query(sql, params);
+    res.json({ items: rows });
+  } catch (e) {
+    res.status(500).json({ error: 'InternalError', detail: e?.message || 'unknown' });
+  }
+}
+
+router.post('/decisoes/ultimas', handlerUltimasDecisoes);
+router.get('/decisoes/ultimas', handlerUltimasDecisoes);
