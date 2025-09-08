@@ -145,10 +145,22 @@ app.post("/api/v1/animals/:id/leite", (req, _res, next) => {
   try {
     const b = req.body ?? {};
     const nb = { ...b };
+    // id do animal vindo da rota
+    if (!nb.animal_id) nb.animal_id = req.params?.id;
     // normaliza data
-    if (b.data) nb.data = normalizeDateCompat(b.data);
+    const hojeISO = new Date().toISOString().slice(0, 10);
+    nb.data = normalizeDateCompat(b.data || b.dt || b.dia || hojeISO);
     // default de turno, se faltar
-    if (nb.turno == null || nb.turno === "") nb.turno = "manha";
+    let turno = nb.turno ?? nb.ordenha ?? nb.turnoOrdenha ?? nb.milking;
+    if (turno == null || turno === "") turno = "manha";
+    // aceita 1/2/3, M/T/N, strings variadas
+    const t = String(turno).toLowerCase();
+    if (["1","m","manhã","manha","morning"].includes(t)) turno = "manha";
+    else if (["2","t","tarde","afternoon"].includes(t)) turno = "tarde";
+    else if (["3","n","noite","night"].includes(t)) turno = "noite";
+    nb.turno = turno;
+    // tipo padrão (alguns validadores exigem)
+    if (!nb.tipo) nb.tipo = "medicao";
     // números comuns com vírgula/ponto
     for (const k of [
       "litros","volume","quantidade",
@@ -158,7 +170,11 @@ app.post("/api/v1/animals/:id/leite", (req, _res, next) => {
       if (k in nb) nb[k] = toNumberCompat(nb[k]);
     }
     // sinônimos
-    if (nb.litros == null && nb.volume != null) nb.litros = nb.volume;
+    if (nb.litros == null) {
+      if (nb.volume != null) nb.litros = nb.volume;
+      else if (nb.quantidade != null) nb.litros = toNumberCompat(nb.quantidade);
+      else if (nb.producao != null) nb.litros = toNumberCompat(nb.producao);
+    }
     if (nb.ccs == null && nb.celulas_somaticas != null) {
       nb.ccs = toNumberCompat(nb.celulas_somaticas);
     }
