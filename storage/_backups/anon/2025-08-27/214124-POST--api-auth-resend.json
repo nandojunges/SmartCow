@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "ts": "2025-08-28T00:41:24.213Z",
+    "method": "POST",
+    "url": "/api/auth/resend",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "ferjunges@outlook.com"
+  },
+  "response": {
+    "message": "Novo código enviado.",
+    "ttl_minutes": 3
+  }
+}

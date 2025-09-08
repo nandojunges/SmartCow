@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode'; // ✅ usar jwtDecode
-import api from '../../api';
+import { jwtDecode } from 'jwt-decode';
+import { apiAuth } from '../../api'; // usa cliente de AUTH (/api)
 import LoginInfoRotativo from './LoginInfoRotativo';
 
 export default function Login() {
@@ -54,8 +54,7 @@ export default function Login() {
     try {
       setCarregando(true);
 
-      // ⚠️ sem barra inicial para evitar // na URL; normaliza email
-      const { data, status } = await api.post('auth/login', {
+      const { data, status } = await apiAuth.post('/auth/login', {
         email: email.trim().toLowerCase(),
         senha: senha.trim(),
       });
@@ -64,20 +63,14 @@ export default function Login() {
         const token = data.token;
         const user = data.user;
 
-        // (opcional) decodifica, mas sem quebrar o fluxo se falhar
-        let decoded;
-        try {
-          decoded = jwtDecode(token); // ✅ agora certo
-        } catch {
-          decoded = null;
-        }
+        let decoded = null;
+        try { decoded = jwtDecode(token); } catch {}
 
         const isAdmin =
           user?.perfil === 'admin' ||
           decoded?.perfil === 'admin' ||
           false;
 
-        // ✅ só agora salvo o token, depois que tudo deu certo
         localStorage.setItem('token', token);
         if (user) localStorage.setItem('user', JSON.stringify(user));
 
@@ -92,12 +85,10 @@ export default function Login() {
         alert('Token não recebido.');
       }
     } catch (err) {
-      // garante que nenhum token residual fique salvo
       localStorage.removeItem('token');
-
       const msg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
         'Email ou senha incorretos.';
       alert(msg);
     } finally {

@@ -1,0 +1,35 @@
+/* roleta.styles.css — APENAS EFEITOS/TRANSIÇÕES  */
+:root{
+  --fx-dur: .40s;
+  --fx-ease: cubic-bezier(.22,.61,.36,1);
+}
+
+/* Fade do overlay */
+.overlayFx{
+  animation: fxFadeIn var(--fx-dur) ease both;
+}
+
+/* Slide-up do container/modal */
+.stageFx{
+  animation: fxSlideUp .28s var(--fx-ease) both;
+}
+
+/* Área que aplica perspectiva para o cartão animado */
+.canvasFx{
+  perspective: 1200px;
+}
+
+/* Cartão animado (dia) – dicas de renderização */
+.cardFx{
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Chevron abre/fecha – só transição */
+.chev{ transition: transform .2s ease; }
+.chev.open{ transform: rotate(180deg); }
+
+/* Keyframes puramente de efeito */
+@keyframes fxFadeIn{ from{opacity:0} to{opacity:1} }
+@keyframes fxSlideUp{ from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }

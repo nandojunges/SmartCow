@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "ts": "2025-08-30T17:20:53.929Z",
+    "method": "POST",
+    "url": "/api/v1/milk/measurements",
+    "userId": "1"
+  },
+  "request": {
+    "id": "2025-08-30",
+    "tipo": "2",
+    "dados": {
+      "4": {
+        "manha": "10",
+        "total": "25.0",
+        "loteSugerido": "Lote 1",
+        "motivoSugestao": "Alta produção e início da lactação",
+        "acaoSugerida": "Manter",
+        "tarde": "15",
+        "data": "2025-08-30"
+      }
+    }
+  },
+  "response": {
+    "ok": true,
+    "id": "2025-08-30"
+  }
+}

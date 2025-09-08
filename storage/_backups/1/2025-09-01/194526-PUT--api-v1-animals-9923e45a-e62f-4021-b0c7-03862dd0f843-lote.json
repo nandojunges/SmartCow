@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "ts": "2025-09-01T22:45:26.357Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/9923e45a-e62f-4021-b0c7-03862dd0f843/lote",
+    "userId": "1"
+  },
+  "request": {
+    "loteId": "8be6d6cd-56e2-4299-9066-0bd9e0ae4116"
+  },
+  "response": {
+    "error": "API route não encontrada"
+  }
+}

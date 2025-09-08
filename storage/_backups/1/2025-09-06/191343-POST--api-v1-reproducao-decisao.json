@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "ts": "2025-09-06T22:13:43.037Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/decisao",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+    "decisao": "IATF"
+  },
+  "response": {
+    "id": "9c5edb78-1a6d-4b32-b27e-23ea00dd4e85",
+    "owner_id": "1",
+    "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+    "data": "2025-09-06T03:00:00.000Z",
+    "tipo": "DECISAO",
+    "detalhes": {
+      "decisao": "IATF"
+    },
+    "resultado": null,
+    "protocolo_id": null,
+    "aplicacao_id": null,
+    "created_at": "2025-09-06T22:13:43.052Z",
+    "updated_at": "2025-09-06T22:13:43.052Z"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "ts": "2025-08-28T22:37:50.076Z",
+    "method": "POST",
+    "url": "/api/v1/animals",
+    "userId": "anon"
+  },
+  "request": {
+    "numero": "4",
+    "brinco": "",
+    "nascimento": "28/08/2025",
+    "sexo": "femea",
+    "raca": "Holandês",
+    "categoria": "Bezerra",
+    "mae": "3",
+    "pai": "",
+    "info_neonatal": {
+      "pelagem": "",
+      "peso": "44",
+      "colostro": "Sim",
+      "origem_colostro": "Mãe",
+      "brix": "26",
+      "hora_parto": "06:00",
+      "hora_colostro": "08:00",
+      "ocorrencia": "Sem ocorrência",
+      "observacoes": ""
+    },
+    "status": "ativo"
+  },
+  "response": {
+    "error": "Unauthorized"
+  }
+}

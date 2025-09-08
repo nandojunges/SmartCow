@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const { initDB } = require('../db');
+import jwt from 'jsonwebtoken';
+import { initDB } from '../db.js';
 const SECRET = process.env.JWT_SECRET || 'segredo';
 
 function autenticarToken(req, res, next) {
@@ -80,4 +80,4 @@ function autenticarToken(req, res, next) {
   });
 }
 
-module.exports = autenticarToken;
+export default autenticarToken;

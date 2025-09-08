@@ -1,7 +1,12 @@
 // backend/utils/email.js
-const nodemailer = require('nodemailer');
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+import nodemailer from 'nodemailer';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const cfg = {
   host: process.env.SMTP_HOST || 'smtp.zoho.com',
@@ -78,4 +83,4 @@ async function enviarCodigo(destino, codigo) {
   }
 }
 
-module.exports = { enviarCodigo, verificarSMTP };
+export { enviarCodigo, verificarSMTP };

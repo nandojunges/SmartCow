@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "ts": "2025-09-04T22:39:36.183Z",
+    "method": "PUT",
+    "url": "/api/v1/reproducao/inseminadores/0b09d9d9-d2b7-4d9e-a464-e3fcc91f1024",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "Lucas",
+    "registro": "CRMV",
+    "ativo": true
+  },
+  "response": {
+    "id": "0b09d9d9-d2b7-4d9e-a464-e3fcc91f1024",
+    "nome": "Lucas",
+    "registro": "CRMV",
+    "ativo": true,
+    "created_at": "2025-09-04T22:26:57.281Z",
+    "updated_at": "2025-09-04T22:26:57.282Z"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "ts": "2025-08-28T00:41:56.585Z",
+    "method": "POST",
+    "url": "/api/auth/login",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "ferjunges@outlook.com",
+    "senha": "123456"
+  },
+  "response": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoiZmVyanVuZ2VzQG91dGxvb2suY29tIiwiaWF0IjoxNzU2MzQxNzE2LCJleHAiOjE3NTY5NDY1MTZ9.RFTPQEHl8VuCL67jhP6V4C_IsvRiN0bl3f9MKE4_19Y",
+    "user": {
+      "id": 1,
+      "email": "ferjunges@outlook.com",
+      "verified": true
+    }
+  }
+}

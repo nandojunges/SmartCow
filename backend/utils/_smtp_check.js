@@ -1,7 +1,12 @@
 // backend/utils/_smtp_check.js
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-const { verificarSMTP } = require('./email');
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+import { verificarSMTP } from './email.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 (async () => {
   console.log('🔎 Testando SMTP com:', {

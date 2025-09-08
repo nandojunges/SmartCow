@@ -1,5 +1,5 @@
 // src/pages/Animais/Animais.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ListChecks,
   PlusCircle,
@@ -10,21 +10,19 @@ import {
   DownloadCloud,
 } from 'lucide-react';
 
-// === Páginas (mantidas) ===
-import AbasTodos from './AbasTodos';
+// Páginas
+import SubAbasAnimais from './SubAbasAnimais';
 import SaidaAnimal from './SaidaAnimal';
 import Inativas from './Inativas';
-import Plantel from './Plantel';
-import Secagem from './Secagem';
-import Parto from './Parto';
-import CadastroAnimal from './CadastroAnimal'; // ✅ novo import
+import CadastroAnimal from './CadastroAnimal';
+import { getAnimais } from '../../api';
 
 /* ---------------------------
    🎨 Personalização central
 ---------------------------- */
 const estilos = {
-  larguraExpandida: '130px', // barra expandida
-  larguraRecolhida: '50px',  // barra recolhida
+  larguraExpandida: '130px',
+  larguraRecolhida: '50px',
   alturaBotao: '50px',
   espacoEntreBotoes: '10px',
   iconeExpandido: 24,
@@ -46,7 +44,7 @@ const icones = {
 };
 
 /* -----------------------------------------
-   Barra Lateral (igual ao seu componente)
+   Barra Lateral
 ------------------------------------------ */
 function ModalLateralAnimais({ abaAtiva, setAbaAtiva, expandido }) {
   const botoes = [
@@ -72,7 +70,7 @@ function ModalLateralAnimais({ abaAtiva, setAbaAtiva, expandido }) {
             onClick={() => setAbaAtiva(btn.id)}
             title={btn.label}
             className={`flex items-center group transition-all duration-300 ease-in-out transform
-              ${expandido ? 'rounded-r-full' : 'rounded-r-full'}
+              rounded-r-full
               ${ativo ? estilos.corAtivo : estilos.corInativo}
               hover:bg-white hover:text-blue-900 hover:shadow-md`}
             style={{
@@ -127,35 +125,58 @@ export default function Animais() {
   const [animais, setAnimais] = useState([]);
   const [expandido, setExpandido] = useState(false);
 
-  const atualizarLocal = (novaLista) =>
-    setAnimais(Array.isArray(novaLista) ? novaLista : []);
+  const carregar = async () => {
+    try {
+      const { items } = await getAnimais();
+      setAnimais(items || []);
+    } catch (err) {
+      console.error('Erro ao carregar animais:', err);
+    }
+  };
+
+  // Carrega ao montar
+  useEffect(() => {
+    carregar();
+  }, []);
+
+  // Qualquer filho pode disparar window.dispatchEvent(new Event("animaisAtualizados"))
+  useEffect(() => {
+    const handler = () => carregar();
+    window.addEventListener('animaisAtualizados', handler);
+    window.addEventListener('animais:refresh', handler);
+    return () => {
+      window.removeEventListener('animaisAtualizados', handler);
+      window.removeEventListener('animais:refresh', handler);
+    };
+  }, []);
 
   const renderizarPrincipal = () => {
     switch (abaAtiva) {
       case 'todos':
-        return (
-          <AbasTodos
-            animais={animais}
-            onRefresh={() => {}}
-            componentes={{
-              plantel: (p) => <Plantel {...p} />,
-              secagem: (p) => <Secagem {...p} />,
-              parto:   (p) => <Parto   {...p} />,
-            }}
-          />
-        );
+        // SubAbasAnimais já mapeia: plantel → Plantel, secagem → Secagem (com botão "Secar"), preparto_parto → PrePartoParto
+        return <SubAbasAnimais animais={animais} onRefresh={carregar} />;
+
       case 'entrada':
-        return <CadastroAnimal animais={animais} onAtualizar={atualizarLocal} />; // ✅ usando o cadastro
+        // Após cadastrar, recarrega do backend
+        return <CadastroAnimal animais={animais} onAtualizar={carregar} />;
+
       case 'saida':
-        return <SaidaAnimal animais={animais} onAtualizar={atualizarLocal} />;
+        // Após registrar saída, recarrega (o animal some do plantel)
+        return <SaidaAnimal animais={animais} onAtualizar={carregar} />;
+
       case 'inativas':
-        return <Inativas animais={animais} onAtualizar={atualizarLocal} />;
+        // Após reativar/excluir/editar, recarrega
+        return <Inativas animais={animais} onAtualizar={carregar} />;
+
       case 'relatorio':
         return <div className="p-4">Relatórios — Em breve…</div>;
+
       case 'importar':
         return <div className="p-4">Importar Dados — Em breve…</div>;
+
       case 'exportar':
         return <div className="p-4">Exportar Dados — Em breve…</div>;
+
       default:
         return <div className="p-4">Em breve…</div>;
     }
@@ -163,7 +184,7 @@ export default function Animais() {
 
   // dimensões/cores
   const larguraFechada = 60;
-  const larguraAberta  = 140;
+  const larguraAberta = 140;
   const ALTURA_TOPO = 150;
   const COR_BARRA = '#1c3586';
 
@@ -197,7 +218,7 @@ export default function Animais() {
       <div
         className="overflow-auto"
         style={{
-          marginLeft: larguraFechada,
+          marginLeft: expandido ? larguraAberta : larguraFechada,
           paddingLeft: 24,
           paddingTop: 16,
           height: '100vh',

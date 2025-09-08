@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "ts": "2025-09-05T21:48:04.822Z",
+    "method": "POST",
+    "url": "/api/v1/genetica/touros/134c5d88-8c7f-454f-ad10-867231145afd/compra",
+    "userId": "1"
+  },
+  "request": {
+    "qtd": 10
+  },
+  "response": {
+    "id": "134c5d88-8c7f-454f-ad10-867231145afd",
+    "owner_id": null,
+    "nome": "fghj",
+    "codigo": "ghjk",
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": "bnml",
+    "valor_por_dose": 5,
+    "quantidade": 15,
+    "created_at": "2025-09-05T21:47:52.356Z",
+    "updated_at": "2025-09-05T21:48:04.829Z",
+    "doses_adquiridas": 15,
+    "doses_restantes": 15
+  }
+}

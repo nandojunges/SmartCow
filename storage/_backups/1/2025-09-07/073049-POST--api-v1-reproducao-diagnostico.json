@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "ts": "2025-09-07T10:30:49.232Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/diagnostico",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+    "data": "2025-09-07",
+    "tipo": "DIAGNOSTICO",
+    "resultado": "prenhe",
+    "detalhes": {
+      "tipoExame": "DG 30d",
+      "diasDesdeIA": 28,
+      "comentario": ""
+    }
+  },
+  "response": {
+    "id": "2e5d11d9-4d48-4d8b-a46f-78fb009535d2",
+    "owner_id": "1",
+    "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+    "data": "2025-09-07T03:00:00.000Z",
+    "tipo": "DIAGNOSTICO",
+    "detalhes": {
+      "tipoExame": "DG 30d",
+      "comentario": "",
+      "diasDesdeIA": 28
+    },
+    "resultado": "prenhe",
+    "protocolo_id": null,
+    "aplicacao_id": null,
+    "created_at": "2025-09-07T10:30:49.234Z",
+    "updated_at": "2025-09-07T10:30:49.234Z"
+  }
+}

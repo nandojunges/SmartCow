@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "ts": "2025-09-07T14:04:01.286Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/f59c0608-cc14-4e2a-8612-43aa0fd17546",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Pre dipping",
+    "categoria": "Higiene e Limpeza",
+    "apresentacao": "Galão de 50L",
+    "quantidade": 50,
+    "unidade": "L",
+    "validade": "2025-09-29T03:00:00.000Z",
+    "valorTotal": 853,
+    "precoUnitario": 17.06,
+    "meta": {
+      "origemCompra": {
+        "modoPreco": "total",
+        "totalInformado": 853,
+        "qtdInformada": 50,
+        "unEstoque": "L",
+        "detalhouEmbalagem": false
+      }
+    },
+    "id": "f59c0608-cc14-4e2a-8612-43aa0fd17546"
+  },
+  "response": {
+    "id": "f59c0608-cc14-4e2a-8612-43aa0fd17546",
+    "nomeComercial": "Pre dipping",
+    "categoria": "Higiene e Limpeza",
+    "quantidade": 50,
+    "unidade": "L",
+    "valorTotal": 853,
+    "apresentacao": "Galão de 50L",
+    "validade": "2025-09-29T03:00:00.000Z",
+    "precoUnitario": 17.06,
+    "createdAt": "2025-09-01T20:46:10.750Z",
+    "updatedAt": "2025-09-07T14:04:01.290Z"
+  }
+}

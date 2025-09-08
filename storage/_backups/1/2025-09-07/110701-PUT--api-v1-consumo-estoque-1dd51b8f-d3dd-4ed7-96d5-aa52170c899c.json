@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "ts": "2025-09-07T14:07:01.345Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/1dd51b8f-d3dd-4ed7-96d5-aa52170c899c",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Sincrocio",
+    "categoria": "Reprodução",
+    "apresentacao": "Frasco de 50ml",
+    "quantidade": 2,
+    "unidade": "un",
+    "validade": "2025-09-24T03:00:00.000Z",
+    "valorTotal": 200,
+    "precoUnitario": 100,
+    "meta": {
+      "origemCompra": {
+        "modoPreco": "total",
+        "totalInformado": 200,
+        "qtdInformada": 2,
+        "unEstoque": "un",
+        "detalhouEmbalagem": false
+      },
+      "reproducao": {
+        "subTipo": "dispositivo",
+        "dispositivo": {
+          "maxUsos": 1
+        }
+      }
+    },
+    "id": "1dd51b8f-d3dd-4ed7-96d5-aa52170c899c"
+  },
+  "response": {
+    "id": "1dd51b8f-d3dd-4ed7-96d5-aa52170c899c",
+    "nomeComercial": "Sincrocio",
+    "categoria": "Reprodução",
+    "quantidade": 2,
+    "unidade": "un",
+    "valorTotal": 200,
+    "apresentacao": "Frasco de 50ml",
+    "validade": "2025-09-24T03:00:00.000Z",
+    "precoUnitario": 100,
+    "createdAt": "2025-09-01T21:03:19.664Z",
+    "updatedAt": "2025-09-07T14:07:01.351Z"
+  }
+}

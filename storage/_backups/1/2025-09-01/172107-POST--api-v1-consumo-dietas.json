@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "ts": "2025-09-01T20:21:07.294Z",
+    "method": "POST",
+    "url": "/api/v1/consumo/dietas",
+    "userId": "1"
+  },
+  "request": {
+    "lote": "Lactação 1",
+    "numVacas": 62,
+    "data": "2025-09-01T20:20:52.117Z",
+    "ingredientes": [
+      {
+        "produto": "",
+        "quantidade": 25
+      }
+    ]
+  },
+  "response": {
+    "id": "34a15b9b-8d35-4da7-a1e5-6713759177f0",
+    "lote": "Lactação 1",
+    "numVacas": 62,
+    "data": "2025-09-01T20:20:52.117Z",
+    "ingredientes": [
+      {
+        "produto": "",
+        "quantidade": 25
+      }
+    ]
+  }
+}

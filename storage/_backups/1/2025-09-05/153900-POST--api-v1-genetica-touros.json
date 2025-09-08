@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "ts": "2025-09-05T18:39:00.170Z",
+    "method": "POST",
+    "url": "/api/v1/genetica/touros",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "Zxdf",
+    "codigo": "xdf",
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": "df",
+    "valor_por_dose": 5,
+    "doses_adquiridas": 5,
+    "doses_restantes": 5,
+    "quantidade": 5
+  },
+  "response": {
+    "error": "API route não encontrada"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "ts": "2025-09-05T22:14:59.686Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/df843cb4-d8ef-49bb-a0e0-35a47913b558/lote",
+    "userId": "1"
+  },
+  "request": {
+    "lote_id": "b2ba595c-5661-4d34-801c-cc2a9edc060e",
+    "lote_nome": "Secas"
+  },
+  "response": {
+    "id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+    "owner_id": "1",
+    "numero": "5",
+    "brinco": "5",
+    "nascimento": "01/01/2020",
+    "raca": "Holandês",
+    "estado": "lactante",
+    "sexo": "femea",
+    "categoria": "Adulto(a)",
+    "pai": "Bluff",
+    "mae": "765",
+    "n_lactacoes": 2,
+    "ultima_ia": "10/08/2025",
+    "parto": "01/04/2025",
+    "previsao_parto": "17/05/2026",
+    "historico": {
+      "lote": {
+        "id": "b2ba595c-5661-4d34-801c-cc2a9edc060e",
+        "nome": "Secas",
+        "updated_at": "2025-09-05T19:14:59.694Z"
+      },
+      "partos": [],
+      "secagens": [],
+      "inseminacoes": []
+    },
+    "created_at": "2025-09-04T22:00:25.740Z",
+    "updated_at": "2025-09-05T22:14:59.694Z",
+    "current_lote_id": "b2ba595c-5661-4d34-801c-cc2a9edc060e",
+    "current_lote_nome": "Secas"
+  }
+}

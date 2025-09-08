@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "ts": "2025-09-07T14:00:52.917Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/f59c0608-cc14-4e2a-8612-43aa0fd17546",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Pre dipping",
+    "categoria": "Higiene e Limpeza",
+    "apresentacao": "L",
+    "quantidade": 5,
+    "unidade": "un",
+    "validade": "2025-09-29T03:00:00.000Z",
+    "valorTotal": 853,
+    "precoUnitario": 170.6,
+    "meta": {
+      "origemCompra": {
+        "modoPreco": "total",
+        "totalInformado": 853,
+        "qtdInformada": 5,
+        "unEstoque": "un",
+        "detalhouEmbalagem": false
+      }
+    },
+    "id": "f59c0608-cc14-4e2a-8612-43aa0fd17546"
+  },
+  "response": {
+    "id": "f59c0608-cc14-4e2a-8612-43aa0fd17546",
+    "nomeComercial": "Pre dipping",
+    "categoria": "Higiene e Limpeza",
+    "quantidade": 5,
+    "unidade": "un",
+    "valorTotal": 853,
+    "apresentacao": "L",
+    "validade": "2025-09-29T03:00:00.000Z",
+    "precoUnitario": 170.6,
+    "createdAt": "2025-09-01T20:46:10.750Z",
+    "updatedAt": "2025-09-07T14:00:52.921Z"
+  }
+}

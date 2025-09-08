@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "ts": "2025-09-06T13:16:18.736Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/ia",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+    "data": "2025-09-06",
+    "detalhes": {
+      "touro_id": "6fcc0622-9fe1-47a6-9bff-1882d77fbd29",
+      "inseminador_id": "0b09d9d9-d2b7-4d9e-a464-e3fcc91f1024",
+      "obs": ""
+    }
+  },
+  "response": {
+    "error": "IAError",
+    "detail": "erro de sintaxe em ou próximo a \"detalhes\""
+  }
+}

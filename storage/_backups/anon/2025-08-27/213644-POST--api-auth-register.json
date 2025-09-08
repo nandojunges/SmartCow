@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "ts": "2025-08-28T00:36:44.799Z",
+    "method": "POST",
+    "url": "/api/auth/register",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "ferjunges@outlook.com",
+    "senha": "123456"
+  },
+  "response": {
+    "message": "Cadastro criado. Código enviado.",
+    "user": {
+      "id": 1,
+      "email": "ferjunges@outlook.com",
+      "verified": false
+    },
+    "ttl_minutes": 3
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "ts": "2025-08-28T00:38:55.442Z",
+    "method": "POST",
+    "url": "/api/v1/api/auth/verify",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "ferjunges@outlook.com",
+    "code": "039546"
+  },
+  "response": {
+    "error": "API route não encontrada"
+  }
+}

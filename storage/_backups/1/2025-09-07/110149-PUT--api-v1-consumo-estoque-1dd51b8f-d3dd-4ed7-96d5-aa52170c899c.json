@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "ts": "2025-09-07T14:01:49.978Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/1dd51b8f-d3dd-4ed7-96d5-aa52170c899c",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Sincrocio",
+    "categoria": "Reprodução",
+    "apresentacao": "ml",
+    "quantidade": 50,
+    "unidade": "mL",
+    "validade": "2025-09-24T03:00:00.000Z",
+    "valorTotal": 2,
+    "precoUnitario": 0.04,
+    "meta": {
+      "origemCompra": {
+        "modoPreco": "total",
+        "totalInformado": 2,
+        "qtdInformada": 50,
+        "unEstoque": "mL",
+        "detalhouEmbalagem": false
+      },
+      "reproducao": {
+        "subTipo": "hormonio",
+        "hormonio": {
+          "classe": "PGF2α",
+          "analogos": [
+            "PGF2α"
+          ]
+        }
+      }
+    },
+    "id": "1dd51b8f-d3dd-4ed7-96d5-aa52170c899c"
+  },
+  "response": {
+    "id": "1dd51b8f-d3dd-4ed7-96d5-aa52170c899c",
+    "nomeComercial": "Sincrocio",
+    "categoria": "Reprodução",
+    "quantidade": 50,
+    "unidade": "mL",
+    "valorTotal": 2,
+    "apresentacao": "ml",
+    "validade": "2025-09-24T03:00:00.000Z",
+    "precoUnitario": 0.04,
+    "createdAt": "2025-09-01T21:03:19.664Z",
+    "updatedAt": "2025-09-07T14:01:49.982Z"
+  }
+}

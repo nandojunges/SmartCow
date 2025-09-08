@@ -1,6 +1,9 @@
-const fs = require('fs').promises;
-const path = require('path');
-const { getDBPath } = require('../db');
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function sanitizeEmail(email) {
   return email.replace(/[@.]/g, '_');
@@ -24,7 +27,12 @@ async function saveStatus(status) {
   await fs.writeFile(statusPath, JSON.stringify(status, null, 2));
 }
 
-async function backupDatabase(email) {
+function getDBPath(email) {
+  const file = `${sanitizeEmail(email)}.sqlite`;
+  return path.join(process.cwd(), 'db', file);
+}
+
+export async function backupDatabase(email) {
   const status = await loadStatus();
   const hoje = new Date().toISOString().slice(0, 10);
   if (status[email] === hoje) {
@@ -42,4 +50,4 @@ async function backupDatabase(email) {
   await saveStatus(status);
 }
 
-module.exports = { backupDatabase };
+export { };

@@ -1,0 +1,27 @@
+{
+  "method": "POST",
+  "url": "/api/auth/register",
+  "headers": {
+    "host": "localhost:3001",
+    "connection": "close",
+    "content-length": "48",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "accept": "application/json",
+    "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"139\", \"Chromium\";v=\"139\"",
+    "content-type": "application/json",
+    "sec-ch-ua-mobile": "?0",
+    "origin": "http://localhost:5173",
+    "sec-fetch-site": "same-origin",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-dest": "empty",
+    "referer": "http://localhost:5173/cadastro?plano=gratis",
+    "accept-encoding": "gzip, deflate, br, zstd",
+    "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
+  },
+  "body": {
+    "email": "smartdfgh@hmail.com",
+    "senha": "123456"
+  },
+  "at": "2025-08-27T00:40:51.461Z"
+}

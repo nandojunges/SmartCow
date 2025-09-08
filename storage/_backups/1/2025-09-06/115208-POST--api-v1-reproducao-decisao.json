@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "ts": "2025-09-06T14:52:08.616Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/decisao",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+    "decisao": "Infusão"
+  },
+  "response": {
+    "id": "20f19423-4bde-40f5-962e-091952457246",
+    "owner_id": "1",
+    "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+    "data": "2025-09-06T03:00:00.000Z",
+    "tipo": "DECISAO",
+    "detalhes": {
+      "decisao": "Infusão"
+    },
+    "resultado": null,
+    "protocolo_id": null,
+    "aplicacao_id": null,
+    "created_at": "2025-09-06T14:52:08.628Z",
+    "updated_at": "2025-09-06T14:52:08.628Z"
+  }
+}

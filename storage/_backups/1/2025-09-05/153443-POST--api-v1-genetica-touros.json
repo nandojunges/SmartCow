@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "ts": "2025-09-05T18:34:43.523Z",
+    "method": "POST",
+    "url": "/api/v1/genetica/touros",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "df",
+    "codigo": "df",
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": "dfgb",
+    "valor_por_dose": 5,
+    "doses_adquiridas": 10,
+    "doses_restantes": 10,
+    "quantidade": 10
+  },
+  "response": {
+    "error": "API route não encontrada"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "ts": "2025-09-02T00:20:57.688Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/a89b0f6b-85e6-45c3-9c4f-a0b109383b8b/lote",
+    "userId": "1"
+  },
+  "request": {
+    "lote_id": "405eadf1-4539-4dbd-8ff5-ca477c480778",
+    "lote_nome": "Lote 3"
+  },
+  "response": {
+    "id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+    "owner_id": "1",
+    "numero": "1",
+    "brinco": "1",
+    "nascimento": "01/01/2022",
+    "raca": "Holandês",
+    "estado": "vazia",
+    "sexo": "femea",
+    "categoria": "Vaca",
+    "pai": "Bluff",
+    "mae": "445",
+    "n_lactacoes": 1,
+    "ultima_ia": "",
+    "parto": "",
+    "previsao_parto": "",
+    "historico": {
+      "lote": {
+        "id": "405eadf1-4539-4dbd-8ff5-ca477c480778",
+        "nome": "Lote 3",
+        "updated_at": "2025-09-01T21:20:57.698Z"
+      }
+    },
+    "created_at": "2025-08-28T17:02:19.349Z",
+    "current_lote_id": "405eadf1-4539-4dbd-8ff5-ca477c480778",
+    "current_lote_nome": "Lote 3"
+  }
+}

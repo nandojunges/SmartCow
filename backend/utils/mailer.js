@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 // Cria transporte utilizando serviço ou configuração SMTP manual
 const transporter = process.env.EMAIL_SERVICE
@@ -31,4 +31,4 @@ async function enviarCodigoVerificacao(destinatario, codigo) {
   console.log('✅ E-mail enviado:', info.messageId);
 }
 
-module.exports = { transporter, enviarCodigoVerificacao };
+export { transporter, enviarCodigoVerificacao };

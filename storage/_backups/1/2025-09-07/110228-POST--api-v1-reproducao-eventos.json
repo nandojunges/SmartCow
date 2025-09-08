@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "ts": "2025-09-07T14:02:28.310Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/eventos",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+    "data": "2025-09-07",
+    "tipo": "TRATAMENTO",
+    "detalhes": {
+      "ocorrencia": "Metrite",
+      "obs": "",
+      "tratamentos": [],
+      "criar_agenda": false,
+      "baixar_estoque": false
+    }
+  },
+  "response": {
+    "id": "778ec4c2-6671-4702-a427-8a9aa9200b54",
+    "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+    "data": "2025-09-07T03:00:00.000Z",
+    "tipo": "TRATAMENTO",
+    "detalhes": {
+      "obs": "",
+      "ocorrencia": "Metrite",
+      "tratamentos": [],
+      "criar_agenda": false,
+      "baixar_estoque": false
+    },
+    "resultado": null,
+    "protocolo_id": null,
+    "aplicacao_id": null,
+    "created_at": "2025-09-07T14:02:28.313Z",
+    "updated_at": "2025-09-07T14:02:28.314Z"
+  }
+}

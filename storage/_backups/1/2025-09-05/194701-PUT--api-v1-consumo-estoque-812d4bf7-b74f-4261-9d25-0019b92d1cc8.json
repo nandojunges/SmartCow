@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "ts": "2025-09-05T22:47:01.390Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/812d4bf7-b74f-4261-9d25-0019b92d1cc8",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Ração",
+    "categoria": "Cozinha",
+    "apresentacao": "sacos",
+    "quantidade": 100,
+    "unidade": "kg",
+    "validade": "2025-09-01T03:00:00.000Z",
+    "valorTotal": 100,
+    "precoUnitario": 1,
+    "meta": {
+      "origemCompra": {
+        "modoPreco": "total",
+        "totalInformado": 100,
+        "qtdInformada": 100,
+        "unEstoque": "kg",
+        "detalhouEmbalagem": false
+      }
+    },
+    "id": "812d4bf7-b74f-4261-9d25-0019b92d1cc8"
+  },
+  "response": {
+    "id": "812d4bf7-b74f-4261-9d25-0019b92d1cc8",
+    "nomeComercial": "Ração",
+    "categoria": "Cozinha",
+    "quantidade": 100,
+    "unidade": "kg",
+    "valorTotal": 100,
+    "apresentacao": "sacos",
+    "validade": "2025-09-01T03:00:00.000Z",
+    "precoUnitario": 1,
+    "createdAt": "2025-09-01T20:30:38.940Z",
+    "updatedAt": "2025-09-05T22:47:01.393Z"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "ts": "2025-09-02T00:41:49.675Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/lotes/8be6d6cd-56e2-4299-9066-0bd9e0ae4116",
+    "userId": "1"
+  },
+  "request": {
+    "id": "8be6d6cd-56e2-4299-9066-0bd9e0ae4116",
+    "nome": "Lote 1",
+    "funcao": "Lactação",
+    "nivelProducao": "Alta Produção",
+    "tipoTratamento": "",
+    "motivoDescarte": "",
+    "descricao": "",
+    "ativo": true,
+    "numVacas": 0,
+    "createdAt": "2025-09-01T22:25:53.539Z",
+    "updatedAt": "2025-09-02T00:41:45.251Z"
+  },
+  "response": {
+    "id": "8be6d6cd-56e2-4299-9066-0bd9e0ae4116",
+    "nome": "Lote 1",
+    "funcao": "Lactação",
+    "nivelProducao": "Alta Produção",
+    "tipoTratamento": "",
+    "motivoDescarte": "",
+    "descricao": "",
+    "ativo": true,
+    "numVacas": 0,
+    "createdAt": "2025-09-01T22:25:53.539Z",
+    "updatedAt": "2025-09-02T00:41:49.682Z"
+  }
+}

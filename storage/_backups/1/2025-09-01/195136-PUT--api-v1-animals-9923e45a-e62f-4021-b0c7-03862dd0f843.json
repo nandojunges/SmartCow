@@ -1,0 +1,136 @@
+{
+  "meta": {
+    "ts": "2025-09-01T22:51:36.940Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/9923e45a-e62f-4021-b0c7-03862dd0f843",
+    "userId": "1"
+  },
+  "request": {
+    "current_lote_id": "67710c8a-6e93-484e-bf11-8343887e681a",
+    "current_lote_nome": "Lote 2"
+  },
+  "response": {
+    "id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+    "owner_id": "1",
+    "numero": "4",
+    "brinco": "",
+    "raca": "Holandês",
+    "estado": "vazia",
+    "sexo": "femea",
+    "categoria": "Bezerra",
+    "n_lactacoes": null,
+    "pai": "Bluff",
+    "mae": "2",
+    "nascimento": "28/08/2025",
+    "ultima_ia": null,
+    "parto": null,
+    "previsao_parto": null,
+    "historico": {
+      "ccs": [
+        {
+          "data": "2025-08-29",
+          "valor": 4000
+        },
+        {
+          "data": "2025-08-30",
+          "valor": 8000
+        },
+        {
+          "data": "2025-08-31",
+          "valor": 18000
+        }
+      ],
+      "leite": [
+        {
+          "data": "2025-08-29",
+          "lote": "",
+          "tipo": "2",
+          "manha": 10,
+          "tarde": 9,
+          "litros": 19,
+          "acaoSugerida": "Mover",
+          "loteSugerido": "Lote 2",
+          "motivoSugestao": "Produção intermediária"
+        },
+        {
+          "data": "2025-08-30",
+          "lote": "",
+          "tipo": "2",
+          "manha": 20,
+          "tarde": 14,
+          "litros": 34,
+          "acaoSugerida": "Manter",
+          "loteSugerido": "Lote 1",
+          "motivoSugestao": "Alta produção e início da lactação"
+        },
+        {
+          "data": "2025-08-31",
+          "lote": "Lote 1",
+          "tipo": "2",
+          "manha": 10,
+          "tarde": 14,
+          "litros": 24,
+          "acaoSugerida": "Manter",
+          "loteSugerido": "Lote 1",
+          "motivoSugestao": "Alta produção e início da lactação"
+        }
+      ],
+      "mastite": {
+        "cmt": [
+          {
+            "cmt": {
+              "PD": {
+                "resultado": "+"
+              },
+              "PE": {
+                "resultado": "0"
+              },
+              "TD": {
+                "resultado": "+++"
+              },
+              "TE": {
+                "resultado": "++"
+              }
+            },
+            "data": "2025-08-29"
+          },
+          {
+            "cmt": {
+              "PD": {
+                "resultado": "0"
+              },
+              "PE": {
+                "resultado": "+++"
+              },
+              "TD": {
+                "resultado": "++"
+              },
+              "TE": {
+                "resultado": "+"
+              }
+            },
+            "data": "2025-08-30"
+          },
+          {
+            "cmt": {
+              "PD": {
+                "resultado": "+++"
+              },
+              "PE": {
+                "resultado": "++"
+              },
+              "TD": {
+                "resultado": "+"
+              },
+              "TE": {
+                "resultado": "0"
+              }
+            },
+            "data": "2025-08-31"
+          }
+        ]
+      }
+    },
+    "created_at": "2025-08-28T23:32:20.545Z"
+  }
+}

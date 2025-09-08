@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "ts": "2025-09-04T22:07:06.228Z",
+    "method": "POST",
+    "url": "/api/v1/genetica/touros",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "sdf",
+    "codigo": "df",
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": "sdf",
+    "valor_por_dose": 1,
+    "quantidade": 11
+  },
+  "response": {
+    "id": "6fcc0622-9fe1-47a6-9bff-1882d77fbd29",
+    "owner_id": "1",
+    "nome": "sdf",
+    "codigo": "df",
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": "sdf",
+    "valor_por_dose": 1,
+    "quantidade": 11,
+    "created_at": "2025-09-04T22:07:06.231Z",
+    "updated_at": "2025-09-04T22:07:06.231Z"
+  }
+}

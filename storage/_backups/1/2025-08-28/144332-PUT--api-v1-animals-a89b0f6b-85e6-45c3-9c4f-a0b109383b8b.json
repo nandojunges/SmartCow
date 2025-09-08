@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "ts": "2025-08-28T17:43:32.729Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+    "userId": "1"
+  },
+  "request": {
+    "numero": "1",
+    "brinco": "2",
+    "nascimento": "01/01/2022",
+    "sexo": "femea",
+    "raca": "Holandês",
+    "categoria": "Vaca",
+    "pai": null,
+    "mae": null,
+    "n_lactacoes": 0,
+    "ultima_ia": null,
+    "parto": null
+  },
+  "response": {
+    "error": "ValidationError",
+    "issues": [
+      {
+        "path": "pai",
+        "message": "Invalid input: expected string, received null",
+        "code": "invalid_type"
+      },
+      {
+        "path": "mae",
+        "message": "Invalid input: expected string, received null",
+        "code": "invalid_type"
+      },
+      {
+        "path": "ultima_ia",
+        "message": "Invalid input: expected string, received null",
+        "code": "invalid_type"
+      },
+      {
+        "path": "parto",
+        "message": "Invalid input: expected string, received null",
+        "code": "invalid_type"
+      }
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "ts": "2025-09-02T09:00:11.316Z",
+    "method": "POST",
+    "url": "/api/v1/consumo/dietas",
+    "userId": "1"
+  },
+  "request": {
+    "lote": "Lote 3",
+    "numVacas": 1,
+    "data": "2025-09-02T08:59:39.408Z",
+    "ingredientes": [
+      {
+        "produto": "Ração",
+        "quantidade": 7
+      },
+      {
+        "produto": "",
+        "quantidade": 0
+      },
+      {
+        "produto": "",
+        "quantidade": 0
+      }
+    ]
+  },
+  "response": {
+    "id": "85dd946e-32ca-4c2a-9899-158b7987c787",
+    "lote": "Lote 3",
+    "numVacas": 1,
+    "data": "2025-09-02T08:59:39.408Z",
+    "ingredientes": [
+      {
+        "produto": "Ração",
+        "quantidade": 7
+      },
+      {
+        "produto": "",
+        "quantidade": 0
+      },
+      {
+        "produto": "",
+        "quantidade": 0
+      }
+    ]
+  }
+}

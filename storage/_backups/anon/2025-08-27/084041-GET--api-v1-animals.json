@@ -1,0 +1,22 @@
+{
+  "method": "GET",
+  "url": "/api/v1/animals",
+  "headers": {
+    "host": "localhost:3001",
+    "connection": "close",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoiZmVyanVuZ2VzQG91dGxvb2suY29tIiwicGVyZmlsIjoiZnVuY2lvbmFyaW8iLCJpYXQiOjE3NTYyNTU1MTIsImV4cCI6MTc1Njg2MDMxMn0.gOwFRUeFz_SpGqLsHfOI8cB9BA-DoVC-flIzamfnPKQ",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "accept": "application/json",
+    "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"139\", \"Chromium\";v=\"139\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-fetch-site": "same-origin",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-dest": "empty",
+    "referer": "http://localhost:5173/animais",
+    "accept-encoding": "gzip, deflate, br, zstd",
+    "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+    "if-none-match": "W/\"2ff-6AMY3F/OLlYCbPAEnQ42ABHp1wc\""
+  },
+  "at": "2025-08-27T11:40:41.126Z"
+}

@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "ts": "2025-09-07T14:04:23.624Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/f538d500-1efa-48a2-80d2-9d05075f037e",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Pencivet",
+    "categoria": "Farmácia",
+    "apresentacao": "Frasco de 50",
+    "quantidade": 12,
+    "unidade": "un",
+    "validade": "2025-09-30T03:00:00.000Z",
+    "valorTotal": 500,
+    "precoUnitario": 41.6667,
+    "meta": {
+      "origemCompra": {
+        "modoPreco": "total",
+        "totalInformado": 500,
+        "qtdInformada": 12,
+        "unEstoque": "un",
+        "detalhouEmbalagem": false
+      }
+    },
+    "id": "f538d500-1efa-48a2-80d2-9d05075f037e"
+  },
+  "response": {
+    "id": "f538d500-1efa-48a2-80d2-9d05075f037e",
+    "nomeComercial": "Pencivet",
+    "categoria": "Farmácia",
+    "quantidade": 12,
+    "unidade": "un",
+    "valorTotal": 500,
+    "apresentacao": "Frasco de 50",
+    "validade": "2025-09-30T03:00:00.000Z",
+    "precoUnitario": 41.6667,
+    "createdAt": "2025-09-01T20:41:16.894Z",
+    "updatedAt": "2025-09-07T14:04:23.628Z"
+  }
+}

@@ -1,8 +1,8 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { pool } = require('../db');             // ← usando Postgres
-const emailUtils = require('../utils/email');  // Zoho ajustado
-const { ensureTenant } = require('../db/tenancy');
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { pool } from '../db.js';             // ← usando Postgres
+import * as emailUtils from '../utils/email.js';  // Zoho ajustado
+import { ensureTenant } from '../db/tenancy.js';
 
 const SECRET = process.env.JWT_SECRET || 'segredo';
 const TTL_MIN = Number(process.env.VERIFICATION_TTL_MINUTES || 3);
@@ -232,10 +232,9 @@ async function login(req, res) {
   }
 }
 
-module.exports = {
+export {
   cadastro,
   verificarEmail,
   login,
-  // compatibilidade se o frontend chama /verify-code
-  verifyCode: verificarEmail,
+  verificarEmail as verifyCode,
 };

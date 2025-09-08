@@ -6,22 +6,31 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
+import { ensureTables } from "./bootstrapResources.js";
+import { initDB } from "./db.js";
 
 import authRoutes from "./routes/auth.js";
 import { tenantContext } from "./middleware/tenantContext.js";
 import { backupOnWrite } from "./middleware/backupOnWrite.js";
+import animalsResource from "./resources/animals.resource.js";
+import productsResource from "./resources/products.resource.js";
+import animalsMetrics from "./resources/animals.metrics.js";
+import productsMetrics from "./resources/products.metrics.js";
+import calendarResource from "./resources/calendar.resource.js"; // 👈 mantém antes do catch-all
+import milkResource from "./resources/milk.resource.js";       // 👈 NOVO
+import consumoResource from "./resources/consumo_reposicao.resource.js"; // 👈 NOVO (Consumo & Reposição)
+import reproducaoResource from "./resources/reproducao.resource.js"; // 👈 NOVO (Reprodução)
+// ⚠️ REMOVIDO import estático de genetica.resource.js — será montado dinamicamente
 
-// __dirname em ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Carrega env do backend/.env e (fallback) da raiz
+// env
 const envBackend = path.join(__dirname, ".env");
 const envRoot = path.join(__dirname, "..", ".env");
 dotenv.config({ path: envBackend });
 dotenv.config({ path: envRoot });
 
-// LOG de conferência do .env (ajuda a diagnosticar SMTP 500)
 const mask = (v) => (v ? "set" : "missing");
 if (process.env.LOG_ENV_PATH === "true") {
   console.log("ENV paths tried:", { backendEnv: envBackend, rootEnv: envRoot });
@@ -34,22 +43,35 @@ console.log("SMTP CONFIG =>", {
   EMAIL_SENHA_APP: mask(process.env.EMAIL_SENHA_APP),
 });
 
-// Flags
 const BACKUP_ENABLED = process.env.BACKUP_ENABLED === "true";
-const PORT = Number(process.env.PORT || 3001);
+const PORT = Number(process.env.PORT) || 3001;
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 
-// Ativa multi-tenant/backup só quando quiser
+// DB/migrations
+try {
+  await initDB();
+  console.log("✅ DB pronto (migrations aplicadas).");
+} catch (err) {
+  console.error("❌ Falha ao inicializar DB:", err);
+  process.exit(1);
+}
+
+// recursos auxiliares (tabelas auxiliares, se houver)
+ensureTables().catch(err => {
+  console.error("Falha ao criar tabelas de recursos:", err);
+});
+
+// Middlewares condicionais
 if (BACKUP_ENABLED) {
   app.use(tenantContext);
   app.use(backupOnWrite);
 }
 
-// Logger focado em /api/auth/*
+// logger de /api/auth/*
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
@@ -65,7 +87,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check (confirma proxy e porta)
+// Health & ping
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
@@ -80,42 +102,65 @@ app.get("/api/health", (req, res) => {
     },
   });
 });
+app.get("/api/ping", (_req, res) => res.json({ ok: true }));
 
-// Servir arquivos estáticos usados pelo front (ex.: rotativos .txt, imagens do login)
+// estáticos (dados exportados etc.)
 app.use("/api/data", express.static(path.join(__dirname, "data")));
-
-// Garante pasta para dumps/recuperações manuais (compatível com seu antigo)
 fs.mkdirSync(path.join(__dirname, "dadosExcluidos"), { recursive: true });
 
-// Rotas da API
-// ⚠️ Mantenha por enquanto só as essenciais.
-// Quando for reativar módulos, monte-os aqui, já protegidos com auth/db conforme você recriar.
+// rotas de autenticação
 app.use("/api/auth", authRoutes);
 
-// Bloqueio explícito para evitar o SPA “engolir” 404 de /api/*
-app.use("/api/*", (req, res) => {
+// métricas
+app.use("/api/v1/animals/metrics", animalsMetrics);
+app.use("/api/v1/products/metrics", productsMetrics);
+
+// recursos principais
+app.use("/api/v1/animals", animalsResource);
+app.use("/api/v1/products", productsResource);
+app.use("/api/v1/calendar", calendarResource);
+app.use("/api/v1/milk", milkResource);
+app.use("/api/v1/consumo", consumoResource);
+app.use("/api/v1/reproducao", reproducaoResource);
+
+// ========================
+// Genética: import dinâmico
+// ========================
+try {
+  const { default: geneticaResource } = await import("./resources/genetica.resource.js");
+  if (geneticaResource) {
+    app.use("/api/v1/genetica", geneticaResource);
+    console.log("✅ /api/v1/genetica montada.");
+  } else {
+    console.warn("⚠️ genetica.resource export default vazio; rota não montada.");
+  }
+} catch (err) {
+  console.warn("⚠️ Falha ao carregar genetica.resource; rota desativada temporariamente:", err?.message || err);
+}
+
+// ❌ NÃO use "/api/*" no Express 5 — quebra o path-to-regexp
+// ✅ Catch-all de API usando prefixo:
+app.use("/api", (req, res) => {
   return res.status(404).json({ error: "API route não encontrada" });
 });
 
-// SPA estático (build do React). Em dev, o Vite cuida.
+// SPA (build do React). Em dev o Vite cuida.
+// ❌ NÃO use app.get("*") no Express 5
+// ✅ Use regex /.*/ para o fallback do SPA
 const distPath = path.join(__dirname, "..", "dist");
 app.use(express.static(distPath));
 
-app.get("*", (req, res) => {
-  if (req.path.startsWith("/api/")) {
-    return res.status(404).json({ error: "API route não encontrada" });
-  }
+app.get(/.*/, (req, res) => {
   const indexPath = path.join(distPath, "index.html");
   if (fs.existsSync(indexPath)) {
     return res.sendFile(indexPath);
   }
-  // Dev fallback (sem build)
   return res
     .status(200)
     .send("<!doctype html><html><body><h1>Dev server ativo</h1></body></html>");
 });
 
-// Handler de erro (por último)
+// handler de erro (último)
 app.use((err, req, res, next) => {
   console.error("❌ ERRO:", {
     method: req.method,
@@ -127,15 +172,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-// Jobs opcionais (somente se habilitar a flag)
+// job opcional
 if (process.env.ENABLE_PREPARTO_JOB === "true") {
   import("./jobs/preparto.js")
     .then((m) => (typeof m.default === "function" ? m.default() : null))
     .catch((e) => console.error("Erro ao iniciar job preparto:", e));
 }
 
+// start
 const server = app.listen(PORT, () => {
-  console.log(`✅ API ON http://localhost:${PORT}`);
+  console.log(`✅ API v1 on http://localhost:${PORT}`);
 });
 
 server.on("error", (err) => {

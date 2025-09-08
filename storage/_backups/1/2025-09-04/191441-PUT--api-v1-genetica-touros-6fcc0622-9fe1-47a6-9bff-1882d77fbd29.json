@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "ts": "2025-09-04T22:14:41.646Z",
+    "method": "PUT",
+    "url": "/api/v1/genetica/touros/6fcc0622-9fe1-47a6-9bff-1882d77fbd29",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "Bluff",
+    "codigo": "123456",
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": "SEMEX",
+    "valor_por_dose": 55,
+    "quantidade": 100
+  },
+  "response": {
+    "id": "6fcc0622-9fe1-47a6-9bff-1882d77fbd29",
+    "owner_id": "1",
+    "nome": "Bluff",
+    "codigo": "123456",
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": "SEMEX",
+    "valor_por_dose": 55,
+    "quantidade": 100,
+    "created_at": "2025-09-04T22:07:06.231Z",
+    "updated_at": "2025-09-04T22:07:06.231Z"
+  }
+}

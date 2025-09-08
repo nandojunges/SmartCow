@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "ts": "2025-09-01T20:58:45.499Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/f59c0608-cc14-4e2a-8612-43aa0fd17546",
+    "userId": "1"
+  },
+  "request": {
+    "id": "f59c0608-cc14-4e2a-8612-43aa0fd17546",
+    "nomeComercial": "fghj",
+    "categoria": "Higiene e Limpeza",
+    "quantidade": 4,
+    "unidade": "un",
+    "valorTotal": 853,
+    "apresentacao": "L",
+    "validade": "2025-09-29T03:00:00.000Z",
+    "precoUnitario": null,
+    "createdAt": "2025-09-01T20:46:10.750Z",
+    "updatedAt": "2025-09-01T20:50:17.704Z"
+  },
+  "response": {
+    "error": "Falha ao atualizar produto"
+  }
+}

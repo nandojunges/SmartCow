@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "ts": "2025-09-01T20:30:38.937Z",
+    "method": "POST",
+    "url": "/api/v1/consumo/estoque",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Ração",
+    "categoria": "Cozinha",
+    "quantidade": 100,
+    "unidade": "kg",
+    "valorTotal": 0,
+    "apresentacao": "po",
+    "validade": "2025-09-01T03:00:00.000Z",
+    "precoUnitario": 2
+  },
+  "response": {
+    "id": "812d4bf7-b74f-4261-9d25-0019b92d1cc8",
+    "nomeComercial": "Ração",
+    "categoria": "Cozinha",
+    "quantidade": 100,
+    "unidade": "kg",
+    "valorTotal": 0,
+    "apresentacao": "po",
+    "validade": "2025-09-01T03:00:00.000Z",
+    "precoUnitario": 2,
+    "createdAt": "2025-09-01T20:30:38.940Z",
+    "updatedAt": "2025-09-01T20:30:38.940Z"
+  }
+}

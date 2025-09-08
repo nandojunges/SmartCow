@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "ts": "2025-08-28T00:33:09.746Z",
+    "method": "POST",
+    "url": "/api/auth/login",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "ferjunges@outlook.com",
+    "senha": "123456"
+  },
+  "response": {
+    "error": "Credenciais inválidas"
+  }
+}

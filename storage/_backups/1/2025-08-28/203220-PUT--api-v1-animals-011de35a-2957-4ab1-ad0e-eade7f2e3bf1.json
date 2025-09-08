@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "ts": "2025-08-28T23:32:20.572Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+    "userId": "1"
+  },
+  "request": {
+    "estado": "lactacao",
+    "parto": "28/08/2025",
+    "n_lactacoes": 2,
+    "historico": {
+      "partos": [
+        {
+          "data": "28/08/2025",
+          "facilidade": "Sem auxílio",
+          "retencaoPlacenta": "Não",
+          "drench": "Sim",
+          "antiInflamatorio": "Não",
+          "principioAtivo": "",
+          "dose": "",
+          "temperatura": "38",
+          "brix": "26",
+          "observacoes": "",
+          "bezerros": [
+            {
+              "sexo": "Fêmea",
+              "peso": "42",
+              "pelagem": "",
+              "colostro": "Sim",
+              "origemColostro": "Mãe",
+              "brix": "26",
+              "horaParto": "06:00",
+              "horaColostro": "10:00",
+              "ocorrencia": "Sem ocorrência",
+              "observacoes": ""
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "id": "011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+    "owner_id": "1",
+    "numero": "2",
+    "brinco": "2",
+    "raca": "Holandês",
+    "estado": "lactacao",
+    "sexo": "femea",
+    "categoria": "Adulto(a)",
+    "n_lactacoes": 2,
+    "pai": "Bluff",
+    "mae": "320",
+    "nascimento": "01/01/2021",
+    "ultima_ia": "01/12/2024",
+    "parto": "28/08/2025",
+    "previsao_parto": "07/09/2025",
+    "created_at": "2025-08-28T17:04:06.293Z"
+  }
+}

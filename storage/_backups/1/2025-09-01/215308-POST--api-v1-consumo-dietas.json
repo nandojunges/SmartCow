@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "ts": "2025-09-02T00:53:08.189Z",
+    "method": "POST",
+    "url": "/api/v1/consumo/dietas",
+    "userId": "1"
+  },
+  "request": {
+    "lote": "Lote 1",
+    "numVacas": 1,
+    "data": "2025-09-02T00:52:50.074Z",
+    "ingredientes": [
+      {
+        "produto": "Ração",
+        "quantidade": 10
+      }
+    ]
+  },
+  "response": {
+    "id": "51116417-ba6d-4358-924f-c009dba0ac30",
+    "lote": "Lote 1",
+    "numVacas": 1,
+    "data": "2025-09-02T00:52:50.074Z",
+    "ingredientes": [
+      {
+        "produto": "Ração",
+        "quantidade": 10
+      }
+    ]
+  }
+}

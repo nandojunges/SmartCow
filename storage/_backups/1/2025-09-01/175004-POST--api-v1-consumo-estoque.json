@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "ts": "2025-09-01T20:50:04.633Z",
+    "method": "POST",
+    "url": "/api/v1/consumo/estoque",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "fgh",
+    "categoria": "Farmácia",
+    "quantidade": 1,
+    "unidade": "un",
+    "valorTotal": 55,
+    "apresentacao": "l",
+    "validade": "2025-10-03T03:00:00.000Z",
+    "precoUnitario": null
+  },
+  "response": {
+    "id": "bb2af589-de02-4080-a7c8-42ee70cd324f",
+    "nomeComercial": "fgh",
+    "categoria": "Farmácia",
+    "quantidade": 1,
+    "unidade": "un",
+    "valorTotal": 55,
+    "apresentacao": "l",
+    "validade": "2025-10-03T03:00:00.000Z",
+    "precoUnitario": null,
+    "createdAt": "2025-09-01T20:50:04.642Z",
+    "updatedAt": "2025-09-01T20:50:04.642Z"
+  }
+}

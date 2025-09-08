@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "ts": "2025-08-28T16:28:10.845Z",
+    "method": "POST",
+    "url": "/api/auth/verify",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "nandokkk@hotmail.com",
+    "code": "504857"
+  },
+  "response": {
+    "message": "E-mail verificado.",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImVtYWlsIjoibmFuZG9ra2tAaG90bWFpbC5jb20iLCJpYXQiOjE3NTYzOTg0OTEsImV4cCI6MTc1NzAwMzI5MX0.abdtphzyFYEwQn27qwUQYg9xfrekrDq1pMRu-2xox2c",
+    "user": {
+      "id": 2,
+      "email": "nandokkk@hotmail.com",
+      "verified": true
+    }
+  }
+}

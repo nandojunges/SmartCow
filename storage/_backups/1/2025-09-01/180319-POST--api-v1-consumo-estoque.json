@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "ts": "2025-09-01T21:03:19.656Z",
+    "method": "POST",
+    "url": "/api/v1/consumo/estoque",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "vcx",
+    "categoria": "Farmácia",
+    "quantidade": 134,
+    "unidade": "un",
+    "valorTotal": 2,
+    "apresentacao": "ml",
+    "validade": "2025-09-24T03:00:00.000Z",
+    "precoUnitario": null
+  },
+  "response": {
+    "id": "1dd51b8f-d3dd-4ed7-96d5-aa52170c899c",
+    "nomeComercial": "vcx",
+    "categoria": "Farmácia",
+    "quantidade": 134,
+    "unidade": "un",
+    "valorTotal": 2,
+    "apresentacao": "ml",
+    "validade": "2025-09-24T03:00:00.000Z",
+    "precoUnitario": null,
+    "createdAt": "2025-09-01T21:03:19.664Z",
+    "updatedAt": "2025-09-01T21:03:19.665Z"
+  }
+}

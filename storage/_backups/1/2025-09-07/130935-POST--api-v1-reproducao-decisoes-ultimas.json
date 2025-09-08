@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "ts": "2025-09-07T16:09:35.670Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/decisoes/ultimas",
+    "userId": "1"
+  },
+  "request": {
+    "ids": [
+      "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+      "9923e45a-e62f-4021-b0c7-03862dd0f843",
+      "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+      "011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+      "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b"
+    ]
+  },
+  "response": {
+    "items": [
+      {
+        "animal_id": "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+        "decisao": "__CLEAR__"
+      },
+      {
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "decisao": "__CLEAR__"
+      },
+      {
+        "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+        "decisao": "IATF"
+      },
+      {
+        "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+        "decisao": "__CLEAR__"
+      }
+    ]
+  }
+}

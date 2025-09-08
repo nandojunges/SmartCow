@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "ts": "2025-09-07T12:14:03.671Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+    "userId": "1"
+  },
+  "request": {
+    "historico": {
+      "lote": {
+        "id": "67710c8a-6e93-484e-bf11-8343887e681a",
+        "nome": "Lote 2",
+        "updated_at": "2025-09-01T21:41:06.056Z"
+      },
+      "leite": [
+        {
+          "data": "2025-08-30",
+          "lote": "",
+          "tipo": "2",
+          "litros": 25
+        }
+      ],
+      "mastite": {},
+      "preparto": {
+        "dias_param": 21,
+        "iniciado_em": "31/08/2025"
+      },
+      "secagens": [
+        {
+          "data": "09/07/2025",
+          "plano": "antibiotico",
+          "medicamento": {},
+          "created_at": "2025-09-07T12:14:03.651Z"
+        }
+      ]
+    },
+    "estado": "seca"
+  },
+  "response": {
+    "id": "011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+    "owner_id": "1",
+    "numero": "2",
+    "brinco": "2",
+    "raca": "Holandês",
+    "estado": "seca",
+    "sexo": "femea",
+    "categoria": "Adulto(a)",
+    "n_lactacoes": 2,
+    "pai": "Bluff",
+    "mae": "320",
+    "nascimento": "01/01/2021",
+    "ultima_ia": "01/12/2024",
+    "parto": "28/08/2025",
+    "previsao_parto": "07/09/2025",
+    "historico": {
+      "lote": {
+        "id": "67710c8a-6e93-484e-bf11-8343887e681a",
+        "nome": "Lote 2",
+        "updated_at": "2025-09-01T21:41:06.056Z"
+      },
+      "leite": [
+        {
+          "data": "2025-08-30",
+          "lote": "",
+          "tipo": "2",
+          "litros": 25
+        }
+      ],
+      "mastite": {},
+      "preparto": {
+        "dias_param": 21,
+        "iniciado_em": "31/08/2025"
+      },
+      "secagens": [
+        {
+          "data": "09/07/2025",
+          "plano": "antibiotico",
+          "created_at": "2025-09-07T12:14:03.651Z",
+          "medicamento": {}
+        }
+      ]
+    },
+    "created_at": "2025-08-28T17:04:06.293Z",
+    "updated_at": null
+  }
+}

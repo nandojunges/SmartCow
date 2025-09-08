@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "ts": "2025-09-01T22:55:14.098Z",
+    "method": "POST",
+    "url": "/api/v1/sanitario/manejos",
+    "userId": "1"
+  },
+  "request": {
+    "id": null,
+    "categoria": "Bezerra",
+    "tipo": "Vacina",
+    "produto": "sdfg",
+    "frequencia": "5",
+    "idade": "1",
+    "via": "Subcutânea",
+    "dose": "20",
+    "dataInicial": "2025-09-30",
+    "proximaAplicacao": "2025-10-04",
+    "ultimaAplicacao": ""
+  },
+  "response": {
+    "error": "API route não encontrada"
+  }
+}

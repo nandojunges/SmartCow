@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "ts": "2025-08-28T16:27:27.529Z",
+    "method": "POST",
+    "url": "/api/auth/register",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "nandokkk@hotmail.com",
+    "senha": "123456"
+  },
+  "response": {
+    "message": "Senha atualizada e novo código enviado.",
+    "user": {
+      "id": 2,
+      "email": "nandokkk@hotmail.com",
+      "verified": false
+    },
+    "ttl_minutes": 3
+  }
+}

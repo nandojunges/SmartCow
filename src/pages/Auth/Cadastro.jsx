@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import Select from 'react-select';
 import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import api from '../../api';
+import { toast } from 'react-toastify';
+import { apiAuth } from '../../api'; // 👈 usa o cliente de AUTH (base /api)
 
-// máscara simples (99) 99999-9999 / (99) 9999-9999
 function formatPhone(v) {
   const d = v.replace(/\D/g, '').slice(0, 11);
   if (d.length <= 10) {
@@ -45,61 +45,83 @@ export default function Cadastro() {
     setForm((f) => ({ ...f, plano }));
   }, [searchParams]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErro('');
-
+  const validar = () => {
     if (!form.nome || !form.email || !form.telefone || !form.senha || !form.confirmar) {
       setErro('Preencha todos os campos obrigatórios.');
-      return;
+      return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       setErro('E-mail inválido.');
-      return;
+      return false;
     }
     const soDigitos = form.telefone.replace(/\D/g, '');
     if (soDigitos.length < 10) {
       setErro('Telefone inválido.');
-      return;
+      return false;
     }
     if (form.senha.length < 6) {
       setErro('A senha deve ter no mínimo 6 caracteres.');
-      return;
+      return false;
     }
     if (form.senha !== form.confirmar) {
       setErro('As senhas não conferem.');
-      return;
+      return false;
     }
+    setErro('');
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validar()) return;
 
     try {
       const emailTrim = form.email.trim().toLowerCase();
 
-      // ⚠️ Chame SEM barra inicial para respeitar baseURL '/api/'
-      // ⚠️ Envie apenas os campos que o backend espera: { email, senha }
-      await api.post('auth/register', {
+      // ✅ chama o backend certo: POST /api/auth/register
+      const { data, status } = await apiAuth.post('/auth/register', {
         email: emailTrim,
         senha: form.senha,
       });
 
-      // O fluxo de verificação só precisa do e-mail
+      // guarda e-mail para a tela de verificação
       localStorage.setItem('emailCadastro', emailTrim);
 
-      // (Opcional) Se quiser manter outros dados para UX futura, salve num namespace diferente
+      // opcional: guardar info adicional para UX futura
       // localStorage.setItem('preCadastroInfo', JSON.stringify({
       //   nome: form.nome,
       //   nomeFazenda: form.fazenda,
-      //   telefone: soDigitos,
+      //   telefone: form.telefone.replace(/\D/g, ''),
       //   plano: form.plano,
       //   formaPagamento: form.plano === 'teste_gratis' ? null : formaPagamento?.value,
       // }));
 
+      if (status === 201) {
+        toast.success('Cadastro criado! Enviamos um código para o seu e-mail.');
+      } else if (status === 200) {
+        // caso usuário já exista mas ainda não verificado
+        toast.info('Conta já existia e não estava verificada. Novo código enviado ao seu e-mail.');
+      }
+
       navigate('/verificar-email', { replace: true });
     } catch (err) {
-      setErro(err.response?.data?.error || err.response?.data?.message || 'Erro ao cadastrar');
+      const status = err?.response?.status;
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        'Erro ao cadastrar.';
+
+      if (status === 409) {
+        // e-mail já verificado no backend
+        toast.error('E-mail já cadastrado. Faça login ou recupere sua senha.');
+        navigate('/login');
+        return;
+      }
+
+      setErro(msg);
     }
   };
 
-  // estilos compactos para caber sem scroll
   const panelStyle = {
     backgroundColor: 'rgba(255,255,255,0.88)',
     padding: '18px',
@@ -142,7 +164,6 @@ export default function Cadastro() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* Nome (linha inteira) */}
           <div>
             <label style={labelStyle}>Nome</label>
             <div className="input-senha-container">
@@ -158,7 +179,6 @@ export default function Cadastro() {
             </div>
           </div>
 
-          {/* Fazenda + Telefone (lado a lado) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={labelStyle}>Nome da Fazenda</label>
@@ -187,7 +207,6 @@ export default function Cadastro() {
             </div>
           </div>
 
-          {/* E-mail (linha inteira) */}
           <div>
             <label style={labelStyle}>E-mail</label>
             <input
@@ -200,7 +219,6 @@ export default function Cadastro() {
             />
           </div>
 
-          {/* Senha + Confirmar (lado a lado) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div className="input-senha-container">
               <div style={{ width: '100%' }}>
@@ -247,7 +265,6 @@ export default function Cadastro() {
             </div>
           </div>
 
-          {/* Plano + alterador (linha única) */}
           {form.plano && (
             <div style={{ textAlign: 'center', fontSize: 12 }}>
               Plano escolhido: <strong>{form.plano}</strong>{' '}
@@ -257,7 +274,6 @@ export default function Cadastro() {
             </div>
           )}
 
-          {/* Forma de pagamento (quando não for teste) */}
           {form.plano && form.plano !== 'teste_gratis' && (
             <div>
               <label style={labelStyle}>Forma de pagamento</label>
@@ -270,14 +286,8 @@ export default function Cadastro() {
                 menuPosition="fixed"
                 styles={{
                   control: (p) => ({
-                    ...p,
-                    minHeight: 36,
-                    height: 36,
-                    backgroundColor: 'white',
-                    borderColor: '#ccc',
-                    borderRadius: 10,
-                    fontSize: 14,
-                    boxShadow: 'none',
+                    ...p, minHeight: 36, height: 36, backgroundColor: 'white',
+                    borderColor: '#ccc', borderRadius: 10, fontSize: 14, boxShadow: 'none',
                   }),
                   valueContainer: (p) => ({ ...p, padding: '0 8px' }),
                   indicatorsContainer: (p) => ({ ...p, height: 36 }),

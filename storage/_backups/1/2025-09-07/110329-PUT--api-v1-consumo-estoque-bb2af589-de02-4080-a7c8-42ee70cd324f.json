@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "ts": "2025-09-07T14:03:29.923Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/bb2af589-de02-4080-a7c8-42ee70cd324f",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Banamine",
+    "categoria": "Farmácia",
+    "apresentacao": "Frasco de 50",
+    "quantidade": 150,
+    "unidade": "mL",
+    "validade": "2025-10-03T03:00:00.000Z",
+    "valorTotal": 55,
+    "precoUnitario": 0.3667,
+    "meta": {
+      "origemCompra": {
+        "modoPreco": "total",
+        "totalInformado": 55,
+        "qtdInformada": 150,
+        "unEstoque": "mL",
+        "detalhouEmbalagem": false
+      }
+    },
+    "id": "bb2af589-de02-4080-a7c8-42ee70cd324f"
+  },
+  "response": {
+    "id": "bb2af589-de02-4080-a7c8-42ee70cd324f",
+    "nomeComercial": "Banamine",
+    "categoria": "Farmácia",
+    "quantidade": 150,
+    "unidade": "mL",
+    "valorTotal": 55,
+    "apresentacao": "Frasco de 50",
+    "validade": "2025-10-03T03:00:00.000Z",
+    "precoUnitario": 0.3667,
+    "createdAt": "2025-09-01T20:50:04.642Z",
+    "updatedAt": "2025-09-07T14:03:29.927Z"
+  }
+}

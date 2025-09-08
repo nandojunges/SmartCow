@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "ts": "2025-09-07T02:26:06.756Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/aplicar-protocolo",
+    "userId": "1"
+  },
+  "request": {
+    "protocolo_id": "f0f56bd0-8a47-4542-93ed-0584e0a551d3",
+    "animais": [
+      "9923e45a-e62f-4021-b0c7-03862dd0f843"
+    ],
+    "data_inicio": "2025-09-06",
+    "hora_inicio": "23:26",
+    "criar_agenda": true,
+    "protocolo_ref": {
+      "id": "f0f56bd0-8a47-4542-93ed-0584e0a551d3",
+      "nome": "IATF 10 DIAS",
+      "descricao": "",
+      "tipo": "IATF",
+      "etapas": [
+        {
+          "dia": 0,
+          "acao": "Inserir Dispositivo",
+          "hormonio": "Benzoato de Estradiol"
+        }
+      ],
+      "ativo": true,
+      "created_at": "2025-09-05T22:34:38.214Z",
+      "updated_at": "2025-09-05T22:34:38.214Z"
+    }
+  },
+  "response": {
+    "aplicacao_id": "f5bdc1bd-31ad-419c-af69-4a6f83c379bd",
+    "eventos": [
+      {
+        "id": "2f9d6007-e8d1-4ce8-adfc-1f76dcebb200",
+        "owner_id": "1",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-05T03:00:00.000Z",
+        "tipo": "PROTOCOLO_ETAPA",
+        "detalhes": {
+          "dia": 0,
+          "acao": "Inserir Dispositivo",
+          "hormonio": "Benzoato de Estradiol",
+          "origem_protocolo": "IATF 10 DIAS"
+        },
+        "resultado": null,
+        "protocolo_id": "f0f56bd0-8a47-4542-93ed-0584e0a551d3",
+        "aplicacao_id": "f5bdc1bd-31ad-419c-af69-4a6f83c379bd",
+        "created_at": "2025-09-07T02:26:06.832Z",
+        "updated_at": "2025-09-07T02:26:06.832Z"
+      }
+    ]
+  }
+}

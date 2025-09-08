@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "ts": "2025-09-02T23:33:54.609Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/protocolos",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "kjhg",
+    "descricao": "",
+    "tipo": "IATF",
+    "etapas": [
+      {
+        "hormonio": "Benzoato de Estradiol",
+        "acao": "",
+        "dia": 0
+      },
+      {
+        "hormonio": "",
+        "acao": "Inserir Dispositivo",
+        "dia": 0
+      },
+      {
+        "hormonio": "PGF2α",
+        "acao": "",
+        "dia": 7
+      },
+      {
+        "hormonio": "",
+        "acao": "Retirar Dispositivo",
+        "dia": 7
+      },
+      {
+        "hormonio": "",
+        "acao": "Inseminação",
+        "dia": 9
+      }
+    ],
+    "ativo": true
+  },
+  "response": {
+    "error": "relação \"repro_protocolo\" não existe"
+  }
+}

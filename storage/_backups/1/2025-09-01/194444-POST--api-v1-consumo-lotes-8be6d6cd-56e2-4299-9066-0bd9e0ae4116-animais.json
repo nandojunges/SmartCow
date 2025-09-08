@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "ts": "2025-09-01T22:44:44.391Z",
+    "method": "POST",
+    "url": "/api/v1/consumo/lotes/8be6d6cd-56e2-4299-9066-0bd9e0ae4116/animais",
+    "userId": "1"
+  },
+  "request": {
+    "animalIds": [
+      "9923e45a-e62f-4021-b0c7-03862dd0f843"
+    ],
+    "mode": "append"
+  },
+  "response": {
+    "error": "API route não encontrada"
+  }
+}

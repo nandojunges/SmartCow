@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "ts": "2025-09-05T16:57:51.100Z",
+    "method": "POST",
+    "url": "/api/v1/genetica/touros/6fcc0622-9fe1-47a6-9bff-1882d77fbd29/compra",
+    "userId": "1"
+  },
+  "request": {
+    "qtd": 10
+  },
+  "response": {
+    "error": "Internal Server Error"
+  }
+}

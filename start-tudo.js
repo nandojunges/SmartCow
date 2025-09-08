@@ -49,7 +49,7 @@ try {
     }
   });
 } catch (err) {
-  console.log('ℹ️ Nenhum processo ocupando a porta 3000.');
+  console.log('ℹ️ Nenhum processo ocupando a porta 3001.');
 }
 
 // 🎯 Build do frontend

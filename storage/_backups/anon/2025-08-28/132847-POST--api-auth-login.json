@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "ts": "2025-08-28T16:28:47.118Z",
+    "method": "POST",
+    "url": "/api/auth/login",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "nandokkk@hotmail.com",
+    "senha": "123456"
+  },
+  "response": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImVtYWlsIjoibmFuZG9ra2tAaG90bWFpbC5jb20iLCJpYXQiOjE3NTYzOTg1MjcsImV4cCI6MTc1NzAwMzMyN30._nLlFaBpPMQf_PoNYbt3iKUoqcfw0KjlzwgAH9nxDKg",
+    "user": {
+      "id": 2,
+      "email": "nandokkk@hotmail.com",
+      "verified": true
+    }
+  }
+}

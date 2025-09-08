@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "ts": "2025-09-03T00:24:53.275Z",
+    "method": "POST",
+    "url": "/api/v1/animals/011de35a-2957-4ab1-ad0e-eade7f2e3bf1/leite",
+    "userId": "1"
+  },
+  "request": {
+    "data": "2025-09-03",
+    "tipo": "2",
+    "manha": 10,
+    "tarde": 12,
+    "litros": 22,
+    "lote": "",
+    "loteSugerido": "Lote 1",
+    "acaoSugerida": "Manter",
+    "motivoSugestao": "Alta produção e início da lactação"
+  },
+  "response": {
+    "error": "ValidationError",
+    "issues": [
+      {
+        "expected": "string",
+        "code": "invalid_type",
+        "path": [
+          "data"
+        ],
+        "message": "Invalid input: expected string, received undefined"
+      }
+    ]
+  }
+}

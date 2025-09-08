@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "ts": "2025-09-01T21:02:47.487Z",
+    "method": "POST",
+    "url": "/api/v1/consumo/estoque",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "vcx",
+    "categoria": "Farmácia",
+    "quantidade": 134,
+    "unidade": "un",
+    "valorTotal": 2,
+    "apresentacao": "ml",
+    "validade": "2025-09-24T03:00:00.000Z",
+    "precoUnitario": null
+  },
+  "response": {
+    "error": "Falha ao criar produto"
+  }
+}

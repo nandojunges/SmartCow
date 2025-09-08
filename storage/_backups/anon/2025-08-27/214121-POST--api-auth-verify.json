@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "ts": "2025-08-28T00:41:21.905Z",
+    "method": "POST",
+    "url": "/api/auth/verify",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "ferjunges@outlook.com",
+    "code": "039546"
+  },
+  "response": {
+    "error": "Código expirado"
+  }
+}

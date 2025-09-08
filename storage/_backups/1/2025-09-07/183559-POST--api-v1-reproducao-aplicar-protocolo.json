@@ -1,0 +1,77 @@
+{
+  "meta": {
+    "ts": "2025-09-07T21:35:59.059Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/aplicar-protocolo",
+    "userId": "1"
+  },
+  "request": {
+    "protocolo_id": "74c5d8d6-6a63-46e1-9a07-0f5187a6af52",
+    "animais": [
+      "9923e45a-e62f-4021-b0c7-03862dd0f843"
+    ],
+    "data_inicio": "2025-09-07",
+    "hora_inicio": "18:35",
+    "criar_agenda": true,
+    "protocolo_ref": {
+      "id": "74c5d8d6-6a63-46e1-9a07-0f5187a6af52",
+      "nome": "dfg",
+      "descricao": "",
+      "tipo": "PRÉ-SINCRONIZAÇÃO",
+      "etapas": [
+        {
+          "dia": 0,
+          "acao": "",
+          "hormonio": "GnRH"
+        },
+        {
+          "dia": 7,
+          "acao": "",
+          "hormonio": "PGF2α"
+        }
+      ],
+      "ativo": true,
+      "created_at": "2025-09-03T00:45:04.119Z",
+      "updated_at": "2025-09-03T00:45:04.119Z"
+    }
+  },
+  "response": {
+    "aplicacao_id": "953eeb0b-38e6-4319-94ec-965eda1a528e",
+    "eventos": [
+      {
+        "id": "87dd73e4-1ace-4c03-9521-6f29446bf732",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-06T03:00:00.000Z",
+        "tipo": "PROTOCOLO_ETAPA",
+        "detalhes": {
+          "dia": 0,
+          "acao": "",
+          "hormonio": "GnRH",
+          "origem_protocolo": "dfg"
+        },
+        "resultado": null,
+        "protocolo_id": "74c5d8d6-6a63-46e1-9a07-0f5187a6af52",
+        "aplicacao_id": "953eeb0b-38e6-4319-94ec-965eda1a528e",
+        "created_at": "2025-09-07T21:35:59.138Z",
+        "updated_at": "2025-09-07T21:35:59.138Z"
+      },
+      {
+        "id": "1905d045-2ec3-4b3f-bcca-1068537e877c",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-13T03:00:00.000Z",
+        "tipo": "PROTOCOLO_ETAPA",
+        "detalhes": {
+          "dia": 7,
+          "acao": "",
+          "hormonio": "PGF2α",
+          "origem_protocolo": "dfg"
+        },
+        "resultado": null,
+        "protocolo_id": "74c5d8d6-6a63-46e1-9a07-0f5187a6af52",
+        "aplicacao_id": "953eeb0b-38e6-4319-94ec-965eda1a528e",
+        "created_at": "2025-09-07T21:35:59.138Z",
+        "updated_at": "2025-09-07T21:35:59.138Z"
+      }
+    ]
+  }
+}

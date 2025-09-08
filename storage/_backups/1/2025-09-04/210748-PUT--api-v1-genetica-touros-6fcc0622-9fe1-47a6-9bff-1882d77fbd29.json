@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "ts": "2025-09-05T00:07:48.798Z",
+    "method": "PUT",
+    "url": "/api/v1/genetica/touros/6fcc0622-9fe1-47a6-9bff-1882d77fbd29",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "Bluff",
+    "codigo": null,
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": null,
+    "valor_por_dose": 55,
+    "doses_adquiridas": 50,
+    "doses_restantes": 0,
+    "quantidade": 0
+  },
+  "response": {
+    "error": "Internal Server Error"
+  }
+}

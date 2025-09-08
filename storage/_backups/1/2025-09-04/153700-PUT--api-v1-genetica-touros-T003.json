@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "ts": "2025-09-04T18:37:00.685Z",
+    "method": "PUT",
+    "url": "/api/v1/genetica/touros/T003",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "Immunity 9",
+    "codigo": "IM009",
+    "ativo": false,
+    "doses_total": 30,
+    "doses_disponiveis": 0
+  },
+  "response": {
+    "error": "API route não encontrada"
+  }
+}

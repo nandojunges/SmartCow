@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "ts": "2025-08-31T17:46:13.364Z",
+    "method": "PUT",
+    "url": "/api/v1/settings/secagem_dias_antes_parto",
+    "userId": "1"
+  },
+  "request": {
+    "value": 100
+  },
+  "response": {
+    "error": "API route não encontrada"
+  }
+}

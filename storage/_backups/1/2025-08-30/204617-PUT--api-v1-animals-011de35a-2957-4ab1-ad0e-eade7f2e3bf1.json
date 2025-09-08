@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "ts": "2025-08-30T23:46:17.963Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+    "userId": "1"
+  },
+  "request": {
+    "leite": [
+      {
+        "data": "2025-08-30",
+        "tipo": "2",
+        "manha": 10,
+        "tarde": 15,
+        "litros": 25,
+        "lote": "",
+        "loteSugerido": "Lote 1",
+        "acaoSugerida": "Manter",
+        "motivoSugestao": "Alta produção e início da lactação"
+      }
+    ]
+  },
+  "response": {
+    "id": "011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+    "owner_id": "1",
+    "numero": "2",
+    "brinco": "2",
+    "raca": "Holandês",
+    "estado": "vazia",
+    "sexo": "femea",
+    "categoria": "Adulto(a)",
+    "n_lactacoes": 2,
+    "pai": "Bluff",
+    "mae": "320",
+    "nascimento": "01/01/2021",
+    "ultima_ia": "01/12/2024",
+    "parto": "28/08/2025",
+    "previsao_parto": "07/09/2025",
+    "historico": {
+      "leite": [
+        {
+          "data": "2025-08-30",
+          "lote": "",
+          "tipo": "2",
+          "litros": 25
+        }
+      ]
+    },
+    "created_at": "2025-08-28T17:04:06.293Z"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "ts": "2025-09-03T00:17:28.257Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/protocolos",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "zfg",
+    "descricao": "",
+    "tipo": "IATF",
+    "etapas": [
+      {
+        "hormonio": "Benzoato de Estradiol",
+        "acao": "",
+        "dia": 0
+      },
+      {
+        "hormonio": "",
+        "acao": "Inserir Dispositivo",
+        "dia": 0
+      },
+      {
+        "hormonio": "PGF2α",
+        "acao": "",
+        "dia": 7
+      },
+      {
+        "hormonio": "",
+        "acao": "Retirar Dispositivo",
+        "dia": 7
+      },
+      {
+        "hormonio": "",
+        "acao": "Inseminação",
+        "dia": 9
+      }
+    ],
+    "ativo": true
+  },
+  "response": {
+    "error": "InternalError",
+    "detail": "sintaxe de entrada inválida para o tipo de dados json"
+  }
+}

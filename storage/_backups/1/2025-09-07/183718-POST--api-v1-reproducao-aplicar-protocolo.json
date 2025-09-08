@@ -1,0 +1,143 @@
+{
+  "meta": {
+    "ts": "2025-09-07T21:37:18.600Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/aplicar-protocolo",
+    "userId": "1"
+  },
+  "request": {
+    "protocolo_id": "653cfb5e-11ff-4d17-a506-f6bbdc129795",
+    "animais": [
+      "9923e45a-e62f-4021-b0c7-03862dd0f843"
+    ],
+    "data_inicio": "2025-09-07",
+    "hora_inicio": "18:37",
+    "criar_agenda": true,
+    "protocolo_ref": {
+      "id": "653cfb5e-11ff-4d17-a506-f6bbdc129795",
+      "nome": " ff",
+      "descricao": "",
+      "tipo": "IATF",
+      "etapas": [
+        {
+          "dia": 0,
+          "acao": "",
+          "hormonio": "Benzoato de Estradiol"
+        },
+        {
+          "dia": 0,
+          "acao": "Inserir Dispositivo",
+          "hormonio": ""
+        },
+        {
+          "dia": 7,
+          "acao": "",
+          "hormonio": "PGF2α"
+        },
+        {
+          "dia": 7,
+          "acao": "Retirar Dispositivo",
+          "hormonio": ""
+        },
+        {
+          "dia": 9,
+          "acao": "Inseminação",
+          "hormonio": ""
+        }
+      ],
+      "ativo": true,
+      "created_at": "2025-09-03T00:45:14.802Z",
+      "updated_at": "2025-09-03T00:45:14.802Z"
+    }
+  },
+  "response": {
+    "aplicacao_id": "436d4de8-6721-405f-a437-a924bf5c32cd",
+    "eventos": [
+      {
+        "id": "356add7f-23a6-4432-acca-058549e57f26",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-06T03:00:00.000Z",
+        "tipo": "PROTOCOLO_ETAPA",
+        "detalhes": {
+          "dia": 0,
+          "acao": "",
+          "hormonio": "Benzoato de Estradiol",
+          "origem_protocolo": " ff"
+        },
+        "resultado": null,
+        "protocolo_id": "653cfb5e-11ff-4d17-a506-f6bbdc129795",
+        "aplicacao_id": "436d4de8-6721-405f-a437-a924bf5c32cd",
+        "created_at": "2025-09-07T21:37:18.604Z",
+        "updated_at": "2025-09-07T21:37:18.604Z"
+      },
+      {
+        "id": "bf0e13e6-ec9b-46e3-aed1-0d67146fe32b",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-06T03:00:00.000Z",
+        "tipo": "PROTOCOLO_ETAPA",
+        "detalhes": {
+          "dia": 0,
+          "acao": "Inserir Dispositivo",
+          "hormonio": "",
+          "origem_protocolo": " ff"
+        },
+        "resultado": null,
+        "protocolo_id": "653cfb5e-11ff-4d17-a506-f6bbdc129795",
+        "aplicacao_id": "436d4de8-6721-405f-a437-a924bf5c32cd",
+        "created_at": "2025-09-07T21:37:18.604Z",
+        "updated_at": "2025-09-07T21:37:18.604Z"
+      },
+      {
+        "id": "b0e839fa-dbcf-467a-a46f-73b4fa22dda3",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-13T03:00:00.000Z",
+        "tipo": "PROTOCOLO_ETAPA",
+        "detalhes": {
+          "dia": 7,
+          "acao": "",
+          "hormonio": "PGF2α",
+          "origem_protocolo": " ff"
+        },
+        "resultado": null,
+        "protocolo_id": "653cfb5e-11ff-4d17-a506-f6bbdc129795",
+        "aplicacao_id": "436d4de8-6721-405f-a437-a924bf5c32cd",
+        "created_at": "2025-09-07T21:37:18.604Z",
+        "updated_at": "2025-09-07T21:37:18.604Z"
+      },
+      {
+        "id": "2af9855e-8513-4d44-b52d-f09df256fcfc",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-13T03:00:00.000Z",
+        "tipo": "PROTOCOLO_ETAPA",
+        "detalhes": {
+          "dia": 7,
+          "acao": "Retirar Dispositivo",
+          "hormonio": "",
+          "origem_protocolo": " ff"
+        },
+        "resultado": null,
+        "protocolo_id": "653cfb5e-11ff-4d17-a506-f6bbdc129795",
+        "aplicacao_id": "436d4de8-6721-405f-a437-a924bf5c32cd",
+        "created_at": "2025-09-07T21:37:18.604Z",
+        "updated_at": "2025-09-07T21:37:18.604Z"
+      },
+      {
+        "id": "2a6a468a-5491-4d01-a547-49c5877f9390",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-15T03:00:00.000Z",
+        "tipo": "PROTOCOLO_ETAPA",
+        "detalhes": {
+          "dia": 9,
+          "acao": "Inseminação",
+          "hormonio": "",
+          "origem_protocolo": " ff"
+        },
+        "resultado": null,
+        "protocolo_id": "653cfb5e-11ff-4d17-a506-f6bbdc129795",
+        "aplicacao_id": "436d4de8-6721-405f-a437-a924bf5c32cd",
+        "created_at": "2025-09-07T21:37:18.604Z",
+        "updated_at": "2025-09-07T21:37:18.604Z"
+      }
+    ]
+  }
+}

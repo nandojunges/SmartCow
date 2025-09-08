@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "ts": "2025-08-30T17:11:57.943Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/9923e45a-e62f-4021-b0c7-03862dd0f843",
+    "userId": "1"
+  },
+  "request": {
+    "id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+    "owner_id": "1",
+    "numero": "4",
+    "brinco": "",
+    "raca": "Holandês",
+    "estado": "vazia",
+    "sexo": "femea",
+    "categoria": "Bezerra",
+    "n_lactacoes": null,
+    "pai": "Bluff",
+    "mae": "2",
+    "nascimento": "28/08/2025",
+    "ultima_ia": null,
+    "parto": null,
+    "previsao_parto": null,
+    "created_at": "2025-08-28T23:32:20.545Z",
+    "lote": "Lote 1",
+    "mediaLeite": 25,
+    "del": 0,
+    "leite": [
+      {
+        "data": "2025-08-30",
+        "litros": 25,
+        "obs": "",
+        "lactacao": 1
+      }
+    ]
+  },
+  "response": {
+    "error": "ValidationError",
+    "issues": [
+      {
+        "path": "ultima_ia",
+        "message": "Invalid input: expected string, received null",
+        "code": "invalid_type"
+      },
+      {
+        "path": "parto",
+        "message": "Invalid input: expected string, received null",
+        "code": "invalid_type"
+      },
+      {
+        "path": "previsao_parto",
+        "message": "Invalid input: expected string, received null",
+        "code": "invalid_type"
+      }
+    ]
+  }
+}

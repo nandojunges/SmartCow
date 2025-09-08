@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "ts": "2025-08-28T00:41:52.291Z",
+    "method": "POST",
+    "url": "/api/auth/verify",
+    "userId": "anon"
+  },
+  "request": {
+    "email": "ferjunges@outlook.com",
+    "code": "455986"
+  },
+  "response": {
+    "message": "E-mail verificado.",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoiZmVyanVuZ2VzQG91dGxvb2suY29tIiwiaWF0IjoxNzU2MzQxNzEyLCJleHAiOjE3NTY5NDY1MTJ9.Jw0Bk8AP88g_0bJDC0yj-CAbhEGTU5P6MkRmBi7582o",
+    "user": {
+      "id": 1,
+      "email": "ferjunges@outlook.com",
+      "verified": true
+    }
+  }
+}

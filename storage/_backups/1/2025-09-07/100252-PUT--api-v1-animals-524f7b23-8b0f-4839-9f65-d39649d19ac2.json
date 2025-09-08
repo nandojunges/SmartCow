@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "ts": "2025-09-07T13:02:52.699Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/524f7b23-8b0f-4839-9f65-d39649d19ac2",
+    "userId": "1"
+  },
+  "request": {
+    "numero": "3",
+    "brinco": "3",
+    "nascimento": "01/01/2023",
+    "sexo": "femea",
+    "raca": "Holandês",
+    "categoria": "Vaca",
+    "situacao_produtiva": "seca",
+    "n_lactacoes": 0,
+    "ultima_ia": "15/01/2025"
+  },
+  "response": {
+    "id": "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+    "owner_id": "1",
+    "numero": "3",
+    "brinco": "3",
+    "raca": "Holandês",
+    "estado": "seca",
+    "sexo": "femea",
+    "categoria": "Vaca",
+    "n_lactacoes": 0,
+    "pai": "",
+    "mae": "",
+    "nascimento": "01/01/2023",
+    "ultima_ia": "15/01/2025",
+    "parto": "",
+    "previsao_parto": "",
+    "historico": {
+      "lote": {
+        "id": "405eadf1-4539-4dbd-8ff5-ca477c480778",
+        "nome": "Lote 3",
+        "updated_at": "2025-09-01T21:41:04.695Z"
+      },
+      "secagens": [
+        {
+          "data": "23/08/2025",
+          "plano": "antibiotico",
+          "created_at": "2025-09-07T12:45:31.224Z",
+          "medicamento": {}
+        }
+      ]
+    },
+    "created_at": "2025-08-28T20:17:44.401Z",
+    "updated_at": "2025-09-07T12:05:44.536Z"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "ts": "2025-09-05T17:40:30.685Z",
+    "method": "PUT",
+    "url": "/api/v1/genetica/touros/22815b28-8624-4f27-b051-656270eafed6",
+    "userId": "1"
+  },
+  "request": {
+    "nome": "Parbo",
+    "codigo": "654321",
+    "ativo": true,
+    "volume_dose": 0.25,
+    "marca": "SEMEX",
+    "valor_por_dose": 65,
+    "doses_adquiridas": 55,
+    "doses_restantes": 50,
+    "quantidade": 50
+  },
+  "response": {
+    "id": "22815b28-8624-4f27-b051-656270eafed6",
+    "nome": "Parbo",
+    "marca": "SEMEX",
+    "valor_por_dose": 65
+  }
+}

@@ -1,8 +1,9 @@
+// src/pages/Auth/EsqueciSenha.jsx
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import api from '../../api';
+import { apiAuth } from '../../api'; // ✅ usa cliente de AUTH (/api)
 
 export default function EsqueciSenha() {
   const [email, setEmail] = useState('');
@@ -16,17 +17,16 @@ export default function EsqueciSenha() {
 
   const enviarCodigo = async (e) => {
     e.preventDefault();
-    if (!email.trim()) {
-      toast.error('Informe seu e-mail.');
-      return;
-    }
+    const eTrim = email.trim().toLowerCase();
+    if (!eTrim) return toast.error('Informe seu e-mail.');
     setEnviando(true);
     try {
-      await api.post('auth/forgot-password', { email: email.trim().toLowerCase() });
+      // ✅ correto: /auth/forgot-password via apiAuth (base: /api)
+      await apiAuth.post('/auth/forgot-password', { email: eTrim });
       setEmailEnviado(true);
       toast.success('Código enviado ao e-mail.');
     } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.message || 'Erro ao enviar e-mail';
+      const msg = err?.response?.data?.error || err?.response?.data?.message || 'Erro ao enviar e-mail';
       toast.error(msg);
     } finally {
       setEnviando(false);
@@ -35,26 +35,25 @@ export default function EsqueciSenha() {
 
   const confirmarCodigo = async (e) => {
     e.preventDefault();
-    if (!codigo.trim()) {
-      toast.error('Informe o código.');
-      return;
-    }
-    if (!novaSenha.trim() || novaSenha.trim().length < 6) {
-      toast.error('A nova senha deve ter pelo menos 6 caracteres.');
-      return;
-    }
+    const eTrim = email.trim().toLowerCase();
+    const code = String(codigo).trim();
+    const pwd = String(novaSenha).trim();
+
+    if (!code) return toast.error('Informe o código.');
+    if (pwd.length < 6) return toast.error('A nova senha deve ter pelo menos 6 caracteres.');
+
     setEnviandoConfirmacao(true);
     try {
-      // ✅ rota e payload corretos: reset-password com { email, code, novaSenha }
-      await api.post('auth/reset-password', {
-        email: email.trim().toLowerCase(),
-        code: String(codigo).trim(),
-        novaSenha: novaSenha.trim(),
+      // ✅ correto: /auth/reset-password via apiAuth
+      await apiAuth.post('/auth/reset-password', {
+        email: eTrim,
+        code,
+        novaSenha: pwd,
       });
       toast.success('Senha redefinida com sucesso!');
-      navigate('/login');
+      navigate('/login', { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.message || 'Código incorreto ou expirado';
+      const msg = err?.response?.data?.error || err?.response?.data?.message || 'Código incorreto ou expirado';
       toast.error(msg);
     } finally {
       setEnviandoConfirmacao(false);

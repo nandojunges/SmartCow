@@ -2,7 +2,7 @@ const WINDOW = 60 * 1000;
 const MAX = 5;
 const hits = new Map();
 
-module.exports = (req, res, next) => {
+export default (req, res, next) => {
   const key = `${req.ip}-${req.originalUrl}`;
   const now = Date.now();
   const data = hits.get(key) || [];

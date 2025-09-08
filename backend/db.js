@@ -1,9 +1,15 @@
-// backend/db.js  — versão PostgreSQL
-const path = require('path');
+// backend/db.js  — versão PostgreSQL (ESM)
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+import { Pool } from 'pg';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Carrega variáveis do backend/.env e, se existir, também do .env da raiz
-require('dotenv').config(); // backend/.env
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') }); // fallback raiz
-const { Pool } = require('pg');
+dotenv.config(); // backend/.env
+dotenv.config({ path: path.join(__dirname, '..', '.env') }); // fallback raiz
 
 // Normalizador de valores de .env (remove aspas e espaços)
 const norm = (v) => (v ?? '').toString().replace(/^"(.*)"$/, '$1').trim();
@@ -419,7 +425,7 @@ function getPool() {
   return pool;
 }
 
-function getDbCompat() {
+function getDb() {
   const p = getPool();
   return {
     prepare(sql) {
@@ -477,10 +483,10 @@ function getDbCompat() {
 }
 
 // >>> MUDE AS EXPORTAÇÕES para expor o compat por padrão
-module.exports = {
+export {
   pool,
   initDB,        // já existente no seu arquivo
-  getDb: getDbCompat, // mantém compat
+  getDb,         // mantém compat
   getPool,       // caso você queira usar pool.query direto em arquivos novos
   sanitizeEmail,
   ensureTenantSchema,

@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "ts": "2025-09-02T00:06:32.194Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/011de35a-2957-4ab1-ad0e-eade7f2e3bf1/lote",
+    "userId": "1"
+  },
+  "request": {
+    "lote_id": "67710c8a-6e93-484e-bf11-8343887e681a",
+    "lote_nome": "Lote 2"
+  },
+  "response": {
+    "id": "011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+    "owner_id": "1",
+    "numero": "2",
+    "brinco": "2",
+    "nascimento": "01/01/2021",
+    "raca": "Holandês",
+    "estado": "vazia",
+    "sexo": "femea",
+    "categoria": "Adulto(a)",
+    "pai": "Bluff",
+    "mae": "320",
+    "n_lactacoes": 2,
+    "ultima_ia": "01/12/2024",
+    "parto": "28/08/2025",
+    "previsao_parto": "07/09/2025",
+    "historico": {
+      "lote": {
+        "id": "67710c8a-6e93-484e-bf11-8343887e681a",
+        "nome": "Lote 2",
+        "updated_at": "2025-09-01T21:06:32.201Z"
+      },
+      "leite": [
+        {
+          "data": "2025-08-30",
+          "lote": "",
+          "tipo": "2",
+          "litros": 25
+        }
+      ],
+      "preparto": {
+        "dias_param": 21,
+        "iniciado_em": "31/08/2025"
+      }
+    },
+    "created_at": "2025-08-28T17:04:06.293Z",
+    "current_lote_id": "67710c8a-6e93-484e-bf11-8343887e681a",
+    "current_lote_nome": "Lote 2"
+  }
+}

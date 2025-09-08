@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "ts": "2025-09-07T14:01:07.209Z",
+    "method": "PUT",
+    "url": "/api/v1/consumo/estoque/bb2af589-de02-4080-a7c8-42ee70cd324f",
+    "userId": "1"
+  },
+  "request": {
+    "nomeComercial": "Banamine",
+    "categoria": "Farmácia",
+    "apresentacao": "l",
+    "quantidade": 133,
+    "unidade": "un",
+    "validade": "2025-10-03T03:00:00.000Z",
+    "valorTotal": 55,
+    "precoUnitario": 0.4135,
+    "meta": {
+      "origemCompra": {
+        "modoPreco": "total",
+        "totalInformado": 55,
+        "qtdInformada": 133,
+        "unEstoque": "un",
+        "detalhouEmbalagem": false
+      }
+    },
+    "id": "bb2af589-de02-4080-a7c8-42ee70cd324f"
+  },
+  "response": {
+    "id": "bb2af589-de02-4080-a7c8-42ee70cd324f",
+    "nomeComercial": "Banamine",
+    "categoria": "Farmácia",
+    "quantidade": 133,
+    "unidade": "un",
+    "valorTotal": 55,
+    "apresentacao": "l",
+    "validade": "2025-10-03T03:00:00.000Z",
+    "precoUnitario": 0.4135,
+    "createdAt": "2025-09-01T20:50:04.642Z",
+    "updatedAt": "2025-09-07T14:01:07.212Z"
+  }
+}

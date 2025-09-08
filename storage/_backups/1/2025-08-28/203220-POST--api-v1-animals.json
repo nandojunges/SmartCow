@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "ts": "2025-08-28T23:32:20.542Z",
+    "method": "POST",
+    "url": "/api/v1/animals",
+    "userId": "1"
+  },
+  "request": {
+    "numero": "4",
+    "brinco": "",
+    "nascimento": "28/08/2025",
+    "sexo": "femea",
+    "raca": "Holandês",
+    "categoria": "Bezerra",
+    "mae": "2",
+    "pai": "Bluff",
+    "info_neonatal": {
+      "pelagem": "",
+      "peso": "42",
+      "colostro": "Sim",
+      "origem_colostro": "Mãe",
+      "brix": "26",
+      "hora_parto": "06:00",
+      "hora_colostro": "10:00",
+      "ocorrencia": "Sem ocorrência",
+      "observacoes": ""
+    },
+    "status": "ativo"
+  },
+  "response": {
+    "id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+    "owner_id": "1",
+    "numero": "4",
+    "brinco": "",
+    "raca": "Holandês",
+    "estado": "vazia",
+    "sexo": "femea",
+    "categoria": "Bezerra",
+    "n_lactacoes": null,
+    "pai": "Bluff",
+    "mae": "2",
+    "nascimento": "28/08/2025",
+    "ultima_ia": null,
+    "parto": null,
+    "previsao_parto": null,
+    "created_at": "2025-08-28T23:32:20.545Z"
+  }
+}

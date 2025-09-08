@@ -1,0 +1,244 @@
+{
+  "produtos": [
+    {
+      "id": "812d4bf7-b74f-4261-9d25-0019b92d1cc8",
+      "nomeComercial": "Ração",
+      "categoria": "Cozinha",
+      "quantidade": 3,
+      "unidade": "un",
+      "valorTotal": 240,
+      "apresentacao": "Sacos de 40Kg",
+      "validade": "2025-09-01T03:00:00.000Z",
+      "precoUnitario": 80,
+      "createdAt": "2025-09-01T20:30:38.940Z",
+      "updatedAt": "2025-09-07T14:05:31.775Z"
+    },
+    {
+      "id": "f538d500-1efa-48a2-80d2-9d05075f037e",
+      "nomeComercial": "Pencivet",
+      "categoria": "Farmácia",
+      "quantidade": 12,
+      "unidade": "un",
+      "valorTotal": 500,
+      "apresentacao": "Frasco de 50ml",
+      "validade": "2025-09-30T03:00:00.000Z",
+      "precoUnitario": 41.6667,
+      "createdAt": "2025-09-01T20:41:16.894Z",
+      "updatedAt": "2025-09-07T14:05:43.428Z"
+    },
+    {
+      "id": "f59c0608-cc14-4e2a-8612-43aa0fd17546",
+      "nomeComercial": "Pre dipping",
+      "categoria": "Higiene e Limpeza",
+      "quantidade": 50,
+      "unidade": "L",
+      "valorTotal": 853,
+      "apresentacao": "Galão de 50L",
+      "validade": "2025-09-29T03:00:00.000Z",
+      "precoUnitario": 17.06,
+      "createdAt": "2025-09-01T20:46:10.750Z",
+      "updatedAt": "2025-09-07T14:04:01.290Z"
+    },
+    {
+      "id": "bb2af589-de02-4080-a7c8-42ee70cd324f",
+      "nomeComercial": "Banamine",
+      "categoria": "Farmácia",
+      "quantidade": 150,
+      "unidade": "mL",
+      "valorTotal": 55,
+      "apresentacao": "Frasco de 50ml",
+      "validade": "2025-10-03T03:00:00.000Z",
+      "precoUnitario": 0.3667,
+      "createdAt": "2025-09-01T20:50:04.642Z",
+      "updatedAt": "2025-09-07T14:05:50.658Z"
+    },
+    {
+      "id": "1dd51b8f-d3dd-4ed7-96d5-aa52170c899c",
+      "nomeComercial": "Sincrocio",
+      "categoria": "Reprodução",
+      "quantidade": 2,
+      "unidade": "un",
+      "valorTotal": 200,
+      "apresentacao": "Frasco de 50ml",
+      "validade": "2025-09-24T03:00:00.000Z",
+      "precoUnitario": 100,
+      "createdAt": "2025-09-01T21:03:19.664Z",
+      "updatedAt": "2025-09-07T14:07:01.351Z"
+    }
+  ],
+  "lotes": [
+    {
+      "id": "8be6d6cd-56e2-4299-9066-0bd9e0ae4116",
+      "nome": "Lote 1",
+      "funcao": "Lactação",
+      "nivelProducao": "Alta Produção",
+      "tipoTratamento": "",
+      "motivoDescarte": "",
+      "descricao": "",
+      "ativo": true,
+      "numVacas": 0,
+      "createdAt": "2025-09-01T22:25:53.539Z",
+      "updatedAt": "2025-09-02T00:41:49.682Z"
+    },
+    {
+      "id": "67710c8a-6e93-484e-bf11-8343887e681a",
+      "nome": "Lote 2",
+      "funcao": "Lactação",
+      "nivelProducao": "Média Produção",
+      "tipoTratamento": "",
+      "motivoDescarte": "",
+      "descricao": "",
+      "ativo": true,
+      "numVacas": 0,
+      "createdAt": "2025-09-01T22:26:32.835Z",
+      "updatedAt": "2025-09-02T00:20:45.299Z"
+    },
+    {
+      "id": "405eadf1-4539-4dbd-8ff5-ca477c480778",
+      "nome": "Lote 3",
+      "funcao": "Lactação",
+      "nivelProducao": "Baixa Produção",
+      "tipoTratamento": "",
+      "motivoDescarte": "",
+      "descricao": "",
+      "ativo": true,
+      "numVacas": 0,
+      "createdAt": "2025-09-02T00:20:34.143Z",
+      "updatedAt": "2025-09-02T00:20:34.143Z"
+    },
+    {
+      "id": "b2ba595c-5661-4d34-801c-cc2a9edc060e",
+      "nome": "Secas",
+      "funcao": "Secagem",
+      "nivelProducao": "",
+      "tipoTratamento": "",
+      "motivoDescarte": "",
+      "descricao": "",
+      "ativo": true,
+      "numVacas": 0,
+      "createdAt": "2025-09-02T00:46:14.091Z",
+      "updatedAt": "2025-09-02T00:46:14.091Z"
+    }
+  ],
+  "lotacoes": {},
+  "dietas": [
+    {
+      "id": "51116417-ba6d-4358-924f-c009dba0ac30",
+      "lote": "Lote 1",
+      "numVacas": 1,
+      "data": "2025-09-02T00:52:50.074Z",
+      "ingredientes": [
+        {
+          "produto": "Ração",
+          "quantidade": 10
+        }
+      ]
+    },
+    {
+      "id": "85dd946e-32ca-4c2a-9899-158b7987c787",
+      "lote": "Lote 3",
+      "numVacas": 1,
+      "data": "2025-09-02T08:59:39.408Z",
+      "ingredientes": [
+        {
+          "produto": "Ração",
+          "quantidade": 7
+        },
+        {
+          "produto": "",
+          "quantidade": 0
+        },
+        {
+          "produto": "",
+          "quantidade": 0
+        }
+      ]
+    }
+  ],
+  "ciclos": [
+    {
+      "id": "1f0c8456-34c5-40ce-9763-93aff5fac3d6",
+      "nome": "Ordenha L1",
+      "tipo": "Ordenhadeira",
+      "diasSemana": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "frequencia": 2,
+      "etapas": [
+        {
+          "produto": "Detergente alcalino",
+          "quantidade": 300,
+          "unidade": "mL",
+          "condicao": {
+            "tipo": "sempre"
+          },
+          "complementar": false
+        },
+        {
+          "produto": "Sanitizante",
+          "quantidade": 200,
+          "unidade": "mL",
+          "condicao": {
+            "tipo": "manha"
+          },
+          "complementar": true
+        }
+      ]
+    },
+    {
+      "id": "d6c54377-5d43-4cfd-9ce0-38f000f06b1a",
+      "nome": "aserth",
+      "tipo": "Ordenhadeira",
+      "diasSemana": [
+        0
+      ],
+      "frequencia": 1,
+      "etapas": [
+        {
+          "produto": "",
+          "quantidade": 250,
+          "unidade": "mL",
+          "condicao": {
+            "tipo": "sempre"
+          },
+          "complementar": false
+        }
+      ]
+    }
+  ],
+  "manejos": [
+    {
+      "id": "00441105-c168-42fc-8333-a90950058d3a",
+      "categoria": "Bezerra",
+      "tipo": "Vacina",
+      "produto": "Brucelose B19",
+      "frequencia": "365",
+      "idade": "90 dias",
+      "via": "Subcutânea",
+      "dose": "3",
+      "dataInicial": "2025-08-01",
+      "proximaAplicacao": "2026-07-31",
+      "ultimaAplicacao": "2025-08-01"
+    },
+    {
+      "id": "8d6bf763-d989-456c-b5a7-fa4571bd6ba5",
+      "categoria": "Bezerra",
+      "tipo": "Vermífugo",
+      "produto": "hgfd",
+      "frequencia": "2",
+      "idade": "6",
+      "via": "",
+      "dose": "10",
+      "dataInicial": "2025-09-02",
+      "proximaAplicacao": "2025-09-03",
+      "ultimaAplicacao": "",
+      "observacoes": ""
+    }
+  ],
+  "exames": []
+}

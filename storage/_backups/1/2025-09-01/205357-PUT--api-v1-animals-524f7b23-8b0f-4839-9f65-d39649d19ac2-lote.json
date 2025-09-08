@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "ts": "2025-09-01T23:53:57.817Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/524f7b23-8b0f-4839-9f65-d39649d19ac2/lote",
+    "userId": "1"
+  },
+  "request": {
+    "lote_id": "67710c8a-6e93-484e-bf11-8343887e681a",
+    "lote_nome": "Lote 2"
+  },
+  "response": {
+    "error": "Falha ao atualizar lote"
+  }
+}
