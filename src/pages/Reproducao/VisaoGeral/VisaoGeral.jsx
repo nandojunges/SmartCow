@@ -487,8 +487,15 @@ async function aplicarProtocoloAPI({
 
 async function postDiagnosticoAPI({ animal_id, resultado, dataISO, detalhes }){
   const payload={ animal_id, data:dataISO||toISODate(today()), tipo:"DIAGNOSTICO", resultado, ...(detalhes?{detalhes}:{}) };
-  const { data } = await api.post("/api/v1/reproducao/diagnostico", payload);
-  return data;
+  try {
+    const { data } = await api.post("/api/v1/reproducao/diagnostico", payload);
+    return data;
+  } catch (e) {
+    if (e?.response?.status === 422 && e.response?.data?.detail) {
+      alert(e.response.data.detail);
+    }
+    throw e;
+  }
 }
 
 /* === CLÍNICA: ocorrência + tratamentos + agenda + baixa de estoque === */

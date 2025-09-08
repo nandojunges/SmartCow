@@ -172,6 +172,9 @@ function normalizeFromEventos(items = []) {
         e.tipo === "DIAGNOSTICO" ? "Diagnostico" :
         e.tipo === "DECISAO" ? "Decisão" :
         e.tipo === "TRATAMENTO" ? "Tratamento" :
+        e.tipo === "PRE_PARTO" ? "Pré-parto" :
+        e.tipo === "SECAGEM" ? "Secagem" :
+        e.tipo === "PERDA_REPRODUTIVA" ? "Perda reprodutiva" :
         (e.tipo || "Evento"),
       nomeProtocolo: e.detalhes?.origem_protocolo || null,
       obs:
