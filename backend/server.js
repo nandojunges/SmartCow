@@ -18,7 +18,7 @@ import animalsMetrics from "./resources/animals.metrics.js";
 import productsMetrics from "./resources/products.metrics.js";
 import calendarResource from "./resources/calendar.resource.js"; // 👈 mantém antes do catch-all
 import milkResource from "./resources/milk.resource.js";       // 👈 NOVO
-import consumoResource from "./resources/consumo_reposicao.resource.js"; // 👈 NOVO (Consumo & Reposição)
+import consumoResource from "./resources/consumo_reposicao.resource.js"; // 👈 Consumo & Reposição
 import reproducaoResource from "./resources/reproducao.resource.js"; // 👈 NOVO (Reprodução)
 // ⚠️ NÃO importar protocolo.resource.js aqui — ele é montado dentro de reproducao.resource.js
 
@@ -116,6 +116,57 @@ app.use("/api/v1/animals/metrics", animalsMetrics);
 app.use("/api/v1/products/metrics", productsMetrics);
 
 // recursos principais
+// --- Compat: aliases de Reposição/Lotes para o front antigo ---
+// /api/v1/reposicao/*  -> usa o mesmo router de consumo
+app.use("/api/v1/reposicao", consumoResource);
+// /api/v1/lots -> reescreve para /lotes no router de consumo
+app.use("/api/v1/lots", (req, res, next) => {
+  req.url = "/lotes" + (req.url || "");
+  return consumoResource(req, res, next);
+});
+
+// --- Compat: normalizador do payload de medição de leite ---
+// Algumas UIs mandam data em DD/MM/YYYY e números com vírgula; também podem
+// usar chaves diferentes (volume/litros, ccs/celulas_somaticas).
+function normalizeDateCompat(s) {
+  if (!s) return s;
+  const v = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;                // YYYY-MM-DD
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v);            // DD/MM/YYYY
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return v;
+}
+function toNumberCompat(x) {
+  if (x == null || x === "") return x;
+  const n = Number(String(x).replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : x;
+}
+app.post("/api/v1/animals/:id/leite", (req, _res, next) => {
+  try {
+    const b = req.body ?? {};
+    const nb = { ...b };
+    // normaliza data
+    if (b.data) nb.data = normalizeDateCompat(b.data);
+    // default de turno, se faltar
+    if (nb.turno == null || nb.turno === "") nb.turno = "manha";
+    // números comuns com vírgula/ponto
+    for (const k of [
+      "litros","volume","quantidade",
+      "gordura","proteina","lactose","ureia",
+      "ccs","solidos","sólidos","caseina","sng"
+    ]) {
+      if (k in nb) nb[k] = toNumberCompat(nb[k]);
+    }
+    // sinônimos
+    if (nb.litros == null && nb.volume != null) nb.litros = nb.volume;
+    if (nb.ccs == null && nb.celulas_somaticas != null) {
+      nb.ccs = toNumberCompat(nb.celulas_somaticas);
+    }
+    req.body = nb;
+  } catch {}
+  next();
+});
+
 app.use("/api/v1/animals", animalsResource);
 app.use("/api/v1/products", productsResource);
 app.use("/api/v1/calendar", calendarResource);
