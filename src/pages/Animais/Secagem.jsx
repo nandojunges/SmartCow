@@ -1,7 +1,7 @@
 // src/pages/Animais/Secagem.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Select from "react-select";
-import api, { getAnimais, atualizarAnimal } from "../../api";
+import api, { getAnimais, registrarSecagem } from "../../api";
 
 export const iconeSecagem = "/icones/secagem.png";
 export const rotuloSecagem = "Secagem";
@@ -129,34 +129,14 @@ function ModalSecagem({ animal, onClose, onSaved }) {
     if (!data || !plano?.value) { setErro("Preencha Data e Plano."); return; }
     setErro(""); setSaving(true);
     try {
-      // monta timeline de secagem
-      const historico = animal?.historico && typeof animal.historico === "object" ? animal.historico : {};
-      const secagens = Array.isArray(historico.secagens) ? [...historico.secagens] : [];
-      secagens.push({
-        data,
-        plano: plano.value,
-        responsavel: responsavel?.label || undefined,
-        observacoes: observacoes || undefined,
-        medicamento: {
-          id: medicamento?.value || undefined,
-          nomeComercial: medicamento?.label || undefined,
-          principioAtivo: principioAtivo || undefined,
-          carenciaLeite: carenciaLeite || undefined,
-          carenciaCarne: carenciaCarne || undefined,
-        },
-        created_at: new Date().toISOString(),
+      const dataISO = parseBR(data)?.toISOString().slice(0, 10);
+      await registrarSecagem({
+        animal_id: animal.id,
+        data: dataISO,
+        detalhes: { plano: plano.value, obs: observacoes || undefined },
       });
-      const novoHistorico = { ...historico, secagens };
-
-      // ⛔️ NÃO mexe em previsao_parto / ultima_ia / situacao_reprodutiva.
-      // ✅ Apenas marca situação PRODUTIVA como "seca" (e mantém compatibilidade com `estado`).
-      await atualizarAnimal(animal.id, {
-        historico: novoHistorico,
-        situacao_produtiva: "seca",
-        estado: "seca",
-      });
-
-      onSaved?.(); onClose?.();
+      onSaved?.();
+      onClose?.();
       window.dispatchEvent(new Event("animaisAtualizados"));
     } catch (e) {
       console.error("Erro ao salvar secagem:", e);
@@ -555,7 +535,10 @@ export default function Secagem({ animais = [], onCountChange }) {
           <ModalSecagem
             animal={modalAnimal}
             onClose={() => setModalAnimal(null)}
-            onSaved={() => setModalAnimal(null)}
+            onSaved={() => {
+              setModalAnimal(null);
+              fetchLista();
+            }}
           />
         )}
       </div>

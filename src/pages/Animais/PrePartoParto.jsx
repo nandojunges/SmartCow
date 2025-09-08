@@ -1,7 +1,7 @@
 // src/pages/Animais/PrePartoParto.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Select from "react-select";
-import { getAnimais, atualizarAnimal, criarAnimal } from "../../api";
+import { getAnimais, registrarPreParto, registrarParto, criarAnimal } from "../../api";
 
 export const iconePreParto = "/icones/preparto.png";
 export const rotuloPreParto = "Pré-parto/Parto";
@@ -196,25 +196,16 @@ function ModalIniciarPreParto({ animal, diasDefault = 30, onCancelar, onSalvo })
     if (!dt) { setErro("Informe uma data válida (dd/mm/aaaa)."); return; }
     setErro(""); setSaving(true);
     try {
-      const historico = animal?.historico && typeof animal.historico === "object"
-        ? { ...animal.historico }
-        : (animal?.historico ? JSON.parse(animal.historico) : {}) || {};
-
-      const prepartoAtual = {
-        ...(historico.preparto || {}),
-        iniciado_em: data,
-        dias_param: Number(dias) || diasDefault,
-        observacoes: obs || undefined,
-      };
-
-      const prepartos = Array.isArray(historico.prepartos) ? [...historico.prepartos] : [];
-      prepartos.push({ ...prepartoAtual, created_at: new Date().toISOString() });
-
-      const novoHistorico = { ...historico, preparto: prepartoAtual, prepartos };
-
-      const atualizado = await atualizarAnimal(animal.id, { historico: novoHistorico });
+      await registrarPreParto({
+        animal_id: animal.id,
+        data: toISO(data),
+        detalhes: {
+          dias_param: Number(dias) || diasDefault,
+          obs: obs || undefined,
+        },
+      });
       window.dispatchEvent(new Event("animaisAtualizados"));
-      onSalvo?.(atualizado?.historico || novoHistorico);
+      onSalvo?.();
     } catch (e) {
       console.error("Erro ao iniciar pré-parto:", e);
       alert("❌ Erro ao salvar início de pré-parto.");
@@ -320,33 +311,24 @@ function ModalBezerros({ vaca, dadosMae, onCancelar, onFinalizado }) {
   const salvar = async () => {
     setSaving(true);
     try {
-      const bodyMae = {
-        parto: dadosMae?.data || undefined,
-        previsao_parto: null,
-        situacao_produtiva: "lactante",
-        situacao_reprodutiva: "vazia",
-        historico: {
-          ...(vaca?.historico || {}),
-          parto: {
-            ...(vaca?.historico?.parto || {}),
-            ultimo: {
-              data: dadosMae?.data,
-              facilidade: dadosMae?.facilidade,
-              observacoes: dadosMae?.observacoes,
-              brix: dadosMae?.brix,
-              retencaoPlacenta: dadosMae?.retencaoPlacenta,
-              drench: dadosMae?.drench,
-              antiInflamatorio: dadosMae?.antiInflamatorio,
-              principioAtivo: dadosMae?.principioAtivo,
-              dose: dadosMae?.dose,
-              temperatura: dadosMae?.temperatura,
-              horaParto: horaParto || undefined,
-              horaColostro: horaColostro || undefined,
-            },
-          },
-        },
+      const detalhes = {
+        facilidade: dadosMae?.facilidade,
+        observacoes: dadosMae?.observacoes,
+        brix: dadosMae?.brix,
+        retencaoPlacenta: dadosMae?.retencaoPlacenta,
+        drench: dadosMae?.drench,
+        antiInflamatorio: dadosMae?.antiInflamatorio,
+        principioAtivo: dadosMae?.principioAtivo,
+        dose: dadosMae?.dose,
+        temperatura: dadosMae?.temperatura,
+        horaParto: horaParto || undefined,
+        horaColostro: horaColostro || undefined,
       };
-      const maeAtualizada = await atualizarAnimal(vaca.id, bodyMae);
+      await registrarParto({
+        animal_id: vaca.id,
+        data: toISO(dadosMae?.data),
+        detalhes,
+      });
 
       const qt = Math.max(1, Math.min(2, Number(qtd) || 1));
       for (let i = 0; i < qt; i++) {
@@ -365,7 +347,7 @@ function ModalBezerros({ vaca, dadosMae, onCancelar, onFinalizado }) {
       }
 
       window.dispatchEvent(new Event("animaisAtualizados"));
-      onFinalizado?.(maeAtualizada || vaca);
+      onFinalizado?.();
     } catch (e) {
       console.error("Erro ao finalizar parto:", e);
       alert("❌ Erro ao salvar parto.");
@@ -473,28 +455,25 @@ export default function PrePartoParto({ animais = [], onCountChange }) {
     await setSetting(SETTING_KEY, n);
   }, [preDaysRaw]);
 
-  // carregar lista (plantel -> filtro em memória)
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (preDays == null) return;
-      setLoading(true); setErro("");
-      try {
-        const { items } = await getAnimais({ view: "plantel", page: 1, limit: 2000 });
-        if (alive) setLista(items || []);
-      } catch (e) {
-        console.error("Erro ao carregar pré-parto/parto:", e);
-        if (alive) { setErro("Não foi possível carregar do servidor. Mostrando dados locais."); setLista(Array.isArray(animais) ? animais : []); }
-      } finally { if (alive) setLoading(false); }
-    })();
-    return () => { alive = false; };
+  const fetchLista = useCallback(async () => {
+    if (preDays == null) return;
+    setLoading(true); setErro("");
+    try {
+      const { items } = await getAnimais({ view: "plantel", page: 1, limit: 2000 });
+      setLista(items || []);
+    } catch (e) {
+      console.error("Erro ao carregar pré-parto/parto:", e);
+      setErro("Não foi possível carregar do servidor. Mostrando dados locais.");
+      setLista(Array.isArray(animais) ? animais : []);
+    } finally { setLoading(false); }
   }, [preDays, animais]);
 
+  useEffect(() => { fetchLista(); }, [fetchLista]);
   useEffect(() => {
-    const h = () => setTimeout(() => setLista((l)=>[...l]), 50);
+    const h = () => fetchLista();
     window.addEventListener("animaisAtualizados", h);
     return () => window.removeEventListener("animaisAtualizados", h);
-  }, []);
+  }, [fetchLista]);
 
   const hoje0 = startOfDay(new Date());
 
@@ -695,10 +674,10 @@ export default function PrePartoParto({ animais = [], onCountChange }) {
             animal={sel}
             diasDefault={preDays ?? 30}
             onCancelar={() => { setShowIniciarPreParto(false); setSel(null); }}
-            onSalvo={(novoHistorico) => {
-              setLista((prev)=>prev.map(a => a.id === sel.id ? { ...a, historico: novoHistorico } : a));
+            onSalvo={() => {
               setShowIniciarPreParto(false);
               setSel(null);
+              fetchLista();
             }}
           />
         )}
@@ -715,11 +694,11 @@ export default function PrePartoParto({ animais = [], onCountChange }) {
             vaca={sel}
             dadosMae={dadosMae}
             onCancelar={() => { setShowBezerros(false); setSel(null); setDadosMae(null); }}
-            onFinalizado={(m) => {
-              setLista((prev)=>prev.filter(x=>x.id!==m.id));
+            onFinalizado={() => {
               setShowBezerros(false);
               setSel(null);
               setDadosMae(null);
+              fetchLista();
               window.dispatchEvent(new Event("animaisAtualizados"));
             }}
           />

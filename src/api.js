@@ -259,6 +259,16 @@ export async function deleteDieta(id) {
   return data;
 }
 
+/* ========= REPRODUÇÃO ========= */
+export const registrarSecagem = (payload) =>
+  apiV1.post('/api/v1/reproducao/secagem', payload).then((r) => r.data);
+export const registrarPreParto = (payload) =>
+  apiV1.post('/api/v1/reproducao/pre-parto', payload).then((r) => r.data);
+export const registrarParto = (payload) =>
+  apiV1.post('/api/v1/reproducao/parto', payload).then((r) => r.data);
+export const registrarDiagnostico = (payload) =>
+  apiV1.post('/api/v1/reproducao/diagnostico', payload).then((r) => r.data);
+
 /* ----- LIMPEZA (Ciclos) ----- */
 export async function getCiclosLimpeza() {
   const { data } = await apiV1.get('/consumo/limpeza/ciclos');
