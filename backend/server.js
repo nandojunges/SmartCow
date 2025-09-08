@@ -124,6 +124,22 @@ app.use("/api/v1/consumo", consumoResource);
 app.use("/api/v1/reproducao", reproducaoResource);
 
 // ========================
+// Protocolo (orquestrador) — import dinâmico
+// ========================
+try {
+  const { default: protocoloOrquestrador } = await import("./resources/protocolo.resource.js");
+  if (protocoloOrquestrador) {
+    // pode compartilhar o mesmo prefixo de reprodução — são subrotas diferentes
+    app.use("/api/v1/reproducao", protocoloOrquestrador);
+    console.log("✅ Orquestrador de protocolo montado em /api/v1/reproducao");
+  } else {
+    console.warn("⚠️ protocolo.resource export default vazio; rota não montada.");
+  }
+} catch (err) {
+  console.warn("⚠️ Falha ao carregar protocolo.resource; orquestrador desativado temporariamente:", err?.message || err);
+}
+
+// ========================
 // Genética: import dinâmico
 // ========================
 try {
