@@ -45,6 +45,7 @@ async function getCols(table) {
 }
 const pickIdCol = (cols) => (cols.has('id') ? 'id' : (cols.has('uuid') ? 'uuid' : null));
 
+// encontra coluna candidata (case-insensitive fallback)
 function findCol(cols, candidates) {
   for (const c of candidates) if (cols.has(c)) return c;
   const lower = new Set([...cols].map(c => c.toLowerCase()));
@@ -77,7 +78,7 @@ const HAS_UPD_INSEM   = INSEM_COLS.has('updated_at');
 const HAS_UPD_TOURO   = TOURO_COLS.has('updated_at');
 
 const HAS_CREATED_PROTO = PROTO_COLS.has('created_at');
-const HAS_CREATED_EVT   = EVT_COLS.has('created_at');
+const HAS_CREATED_EVT   = EVT_COLS.has('created_at'); // <<< mantém só esta declaração
 const HAS_CREATED_INSEM = INSEM_COLS.has('created_at');
 const HAS_CREATED_ANIM  = ANIM_COLS.has('created_at');
 
@@ -93,7 +94,7 @@ const ANIM_DECISAO = findCol(ANIM_COLS, ['decisao']);
 const ANIM_NUM   = findCol(ANIM_COLS, ['numero','num','number','identificador']);
 const ANIM_BRINC = findCol(ANIM_COLS, ['brinco','ear_tag','earTag','brinc']);
 
-// protocolo/aplicação atuais (se existirem)
+// protocolo/aplicação atuais (se existirem) — ponteiros mantidos pelo orquestrador
 const ANIM_PROTO_ATUAL = findCol(ANIM_COLS, [
   'protocolo_id_atual','protocoloAtualId','protocolo_atual_id',
   'protocolo_atual','protocoloAtual','protocolo_ativo','protocoloAtivo'
@@ -988,5 +989,16 @@ const insemCfg = {
 };
 
 router.use('/inseminadores', makeCrudRouter(insemCfg, db));
+
+/* =================== Integração com o ORQUESTRADOR =================== */
+// Monta dinamicamente as rotas do orquestrador dentro deste router.
+// Assim, o server não precisa importar separadamente (evita erros de path).
+try {
+  const { default: protocoloRouter } = await import('./protocolo.resource.js');
+  router.use(protocoloRouter);
+  console.log('[reproducao] ✅ Orquestrador (protocolo.resource) montado dentro de /api/v1/reproducao');
+} catch (err) {
+  console.warn('[reproducao] ⚠️ Orquestrador indisponível:', err?.message || err);
+}
 
 export default router;

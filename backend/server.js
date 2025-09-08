@@ -20,7 +20,7 @@ import calendarResource from "./resources/calendar.resource.js"; // 👈 mantém
 import milkResource from "./resources/milk.resource.js";       // 👈 NOVO
 import consumoResource from "./resources/consumo_reposicao.resource.js"; // 👈 NOVO (Consumo & Reposição)
 import reproducaoResource from "./resources/reproducao.resource.js"; // 👈 NOVO (Reprodução)
-// ⚠️ genetica.resource e protocolo.resource serão montados dinamicamente
+// ⚠️ NÃO importar protocolo.resource.js aqui — ele é montado dentro de reproducao.resource.js
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -122,22 +122,6 @@ app.use("/api/v1/calendar", calendarResource);
 app.use("/api/v1/milk", milkResource);
 app.use("/api/v1/consumo", consumoResource);
 app.use("/api/v1/reproducao", reproducaoResource);
-
-// =====================================
-// Reprodução (Orquestrador): import dinâmico
-// =====================================
-try {
-  const { default: reproOrquestrador } = await import("./resources/protocolo.resource.js"); // 👈 caminho CORRETO
-  if (reproOrquestrador) {
-    // Monta com mesmo prefixo, após o recurso principal, para prevalecer se houver paths idênticos
-    app.use("/api/v1/reproducao", reproOrquestrador);
-    console.log("✅ Orquestrador de reprodução montado em /api/v1/reproducao.");
-  } else {
-    console.warn("⚠️ protocolo.resource export default vazio; rota não montada.");
-  }
-} catch (err) {
-  console.warn("⚠️ Falha ao carregar protocolo.resource; orquestrador desativado temporariamente:", err?.message || err);
-}
 
 // ========================
 // Genética: import dinâmico
