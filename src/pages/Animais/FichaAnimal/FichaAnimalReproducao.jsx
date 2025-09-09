@@ -22,7 +22,7 @@ import {
 const RAW_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const API_ROOT = RAW_BASE ? `${RAW_BASE}/api/v1` : "/api/v1";
 const API_REPRO = `${API_ROOT}/reproducao`;
-const API_ANIM = `${API_ROOT}/reproducao/animais`;
+const API_ANIM  = `${API_ROOT}/animals`;
 
 function authHeaders() {
   const token = localStorage.getItem("token");
@@ -386,18 +386,30 @@ export default function FichaAnimalReproducao({ animal }) {
     return eventos.sort((a,b)=>toDateBR(a.data)-toDateBR(b.data));
   }, [ciclos, ciclosEditados]);
 
+  // KPIs: IA+ = DG+ pareado OU parto subsequente; IA− = DG− pareado OU retorno de cio (18–25d sem DG+)
   const taxaIA = useMemo(() => {
-    let pos=0, neg=0;
-    ciclos.forEach(c=>{
-      const ordenadas = [...(c.ia || [])].sort((a,b)=>toDateBR(a.data)-toDateBR(b.data));
+    let pos = 0, neg = 0;
+    const diagnosticos = histMerged?.diagnosticosGestacao || [];
+    ciclos.forEach(c => {
+      const ordenadas = [...(c.ia || [])].sort((a,b) => toDateBR(a.data) - toDateBR(b.data));
       const partoData = c.parto?.data ? toDateBR(c.parto.data) : null;
-      let idxUltimaValida = -1;
-      if (partoData) for (let j=ordenadas.length-1;j>=0;j--) { const iaDate = toDateBR(ordenadas[j].data); if (iaDate && iaDate < partoData) { idxUltimaValida = j; break; } }
-      ordenadas.forEach((ia,idx)=>{ if (ia.diagnostico==="positivo") pos++; else if (!ia.diagnostico && idx===idxUltimaValida) pos++; else neg++; });
+      ordenadas.forEach((ia, idx) => {
+        const iaDate = toDateBR(ia.data);
+        if (!iaDate) return;
+        const dx = diagnosticos.find(d => d.dataIA === ia.data);
+        if (dx?.resultado === "positivo") { pos++; return; }
+        if (dx?.resultado === "negativo") { neg++; return; }
+        if (partoData && (!ordenadas[idx+1] || toDateBR(ordenadas[idx+1].data) > partoData)) { pos++; return; }
+        const proxIA = ordenadas[idx+1] ? toDateBR(ordenadas[idx+1].data) : null;
+        if (proxIA) {
+          const diff = Math.floor((proxIA - iaDate) / DAY);
+          if (diff >= 18 && diff <= 25) neg++;
+        }
+      });
     });
-    const taxa = (pos+neg)>0 ? (pos/(pos+neg))*100 : 0;
+    const taxa = (pos + neg) > 0 ? (pos / (pos + neg)) * 100 : 0;
     return { pos, neg, taxa };
-  }, [ciclos]);
+  }, [ciclos, histMerged]);
 
   /* ===== Ações backend ===== */
   async function excluirEventoById(id) {
