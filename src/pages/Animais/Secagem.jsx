@@ -1,7 +1,7 @@
 // src/pages/Animais/Secagem.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Select from "react-select";
-import api, { getAnimais, registrarSecagem } from "../../api";
+import api, { getAnimais } from "../../api";
 
 export const iconeSecagem = "/icones/secagem.png";
 export const rotuloSecagem = "Secagem";
@@ -130,7 +130,8 @@ function ModalSecagem({ animal, onClose, onSaved }) {
     setErro(""); setSaving(true);
     try {
       const dataISO = parseBR(data)?.toISOString().slice(0, 10);
-      await registrarSecagem({
+      // envia direto para o recurso de Reprodução
+      await api.post('/api/v1/reproducao/secagem', {
         animal_id: animal.id,
         data: dataISO,
         detalhes: { plano: plano.value, obs: observacoes || undefined },
@@ -330,14 +331,20 @@ export default function Secagem({ animais = [], onCountChange }) {
   // ===== helpers de estado/visibilidade =====
   const hoje = new Date();
 
+  const getSitProd = (v) =>
+    String(v?.situacao_produtiva ?? v?.situacaoProdutiva ?? v?.sit_produtiva ?? v?.estado ?? "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
   const isJaSeca = (v) => {
-    if (String(v?.situacao_produtiva || v?.estado || "").toLowerCase() === "seca") return true;
+    const sp = getSitProd(v);
+    if (sp.includes("seca")) return true;
     const sec = v?.historico?.secagens;
     return Array.isArray(sec) && sec.length > 0;
   };
   const ehLactanteOuVaca = (v) => {
-    const estado = String(v?.situacao_produtiva || v?.estado || "").toLowerCase();
-    if (estado === "lactante" || estado === "lactacao" || estado === "lactando") return true;
+    const sp = getSitProd(v);
+    if (sp.includes("seca")) return false;           // já seca não deve aparecer
+    if (sp.includes("lact")) return true;            // lactante/lactacao
     const categoria = String(v?.categoria || "").toLowerCase();
     if (categoria.includes("vaca")) return true;
     const dtParto = parseBR(v?.parto);
