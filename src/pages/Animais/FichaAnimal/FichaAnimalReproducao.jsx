@@ -22,7 +22,7 @@ import {
 const RAW_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const API_ROOT = RAW_BASE ? `${RAW_BASE}/api/v1` : "/api/v1";
 const API_REPRO = `${API_ROOT}/reproducao`;
-const API_ANIM  = `${API_ROOT}/animals`;
+const API_ANIM  = `${API_ROOT}/animals`; // derivados apenas
 
 function authHeaders() {
   const token = localStorage.getItem("token");
@@ -41,6 +41,20 @@ async function apiDelete(url) {
   if (!r.ok) throw new Error(`${r.status}`);
   try { return await r.json(); } catch { return { ok: true }; }
 }
+
+async function apiPost(url, payload) {
+  const r = await fetch(url, { method: "POST", headers: authHeaders(), body: JSON.stringify(payload || {}) });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}
+
+// ações: usam as rotas do backend (validações de janela/422 já no PR #6)
+async function registrarIA(payload){ return apiPost(`${API_REPRO}/ia`, payload); }
+async function registrarDG(payload){ return apiPost(`${API_REPRO}/diagnostico`, payload); }
+async function aplicarProtocolo(payload){ return apiPost(`${API_REPRO}/aplicar-protocolo`, payload); }
+async function iniciarTratamento(payload){ return apiPost(`${API_REPRO}/tratamento`, payload); }
+async function registrarSecagem(payload){ return apiPost(`${API_REPRO}/secagem`, payload); }
+async function registrarParto(payload){ return apiPost(`${API_REPRO}/parto`, payload); }
 
 /* ========= Datas ========= */
 const DAY = 86400000;
@@ -190,6 +204,34 @@ function normalizeFromEventos(items = []) {
   return { inseminacoes: ias, partos, secagens, diagnosticosGestacao, ocorrenciasAll: ocorrencias, eventosRaw: eventos };
 }
 
+// pinta tipos/cores + tooltip rico (usa detalhes do backend)
+function processarEventosParaTimeline(evs){
+  return (evs||[]).map(e=>{
+    const tipo = e.tipo;
+    let cor = '#64748b';
+    if (tipo==='IA') cor='#2563eb';
+    else if (tipo==='DIAGNOSTICO') cor='#06b6d4';
+    else if (tipo==='TRATAMENTO') cor='#f59e0b';
+    else if (tipo==='SECAGEM') cor='#8b5cf6';
+    else if (tipo==='PARTO') cor='#22c55e';
+    else if (tipo==='PROTOCOLO_ETAPA') cor='#7c3aed';
+    else if (tipo==='DECISAO') cor='#6b7280';
+    const d = e.detalhes || {};
+    const hover = {
+      data: e.data,
+      janela_dg: e.janela_dg || d.janela,
+      ia_ref_data: e.ia_ref_data || d.ia_ref_data,
+      origem_protocolo: e.origem_protocolo || d.origem_protocolo,
+      parent_aplicacao_id: e.parent_aplicacao_id || d.parent_aplicacao_id,
+      touro_id: d.touro_id,
+      inseminador_id: d.inseminador_id,
+      observacao: d.observacao,
+      resultado: e.resultado
+    };
+    return { ...e, _ui:{ cor, label:e.tipo_humano||tipo, hover } };
+  });
+}
+
 /* ========= Persistência local (edições rápidas) ========= */
 const KEY_CICLOS = (numero) => `ciclosEditados:${numero}`;
 function getCiclosLS(numero) {
@@ -236,6 +278,9 @@ export default function FichaAnimalReproducao({ animal }) {
   const [historicoRemoto, setHistoricoRemoto] = useState(null);
   const [ocorrencias, setOcorrencias] = useState([]); // normalizadas a partir dos eventos
   const [animalId, setAnimalId] = useState(null);
+  const [eventos, setEventos] = useState([]);
+  const [animalDeriv, setAnimalDeriv] = useState(null);
+  const [agenda, setAgenda] = useState([]);
 
   // carregar ciclos editados (local)
   useEffect(() => { setCiclosEditados(getCiclosLS(animal?.numero || "vaca")); }, [animal?.numero]);
@@ -258,9 +303,10 @@ export default function FichaAnimalReproducao({ animal }) {
     setAnimalId(id);
     if (!id) return;
 
-    // 1) eventos do animal
+    // Fonte PRIMÁRIA da timeline: /reproducao/eventos/animal/:id
     const data = await apiGet(`${API_REPRO}/eventos/animal/${encodeURIComponent(id)}`);
     const items = Array.isArray(data?.items) ? data.items : [];
+    setEventos(processarEventosParaTimeline(items));
     const norm = normalizeFromEventos(items);
     setHistoricoRemoto({
       inseminacoes: norm.inseminacoes,
@@ -269,6 +315,9 @@ export default function FichaAnimalReproducao({ animal }) {
       diagnosticosGestacao: norm.diagnosticosGestacao,
     });
     setOcorrencias(norm.ocorrenciasAll);
+
+    const anim = await apiGet(`${API_ANIM}/${encodeURIComponent(id)}`);
+    setAnimalDeriv(anim);
 
     // notifica que veio atualização (para outras telas que escutam)
     window.dispatchEvent(new Event("registroReprodutivoAtualizado"));
@@ -280,6 +329,26 @@ export default function FichaAnimalReproducao({ animal }) {
     window.addEventListener("registroReprodutivoAtualizado", h);
     return () => window.removeEventListener("registroReprodutivoAtualizado", h);
   }, [animal?.id, animal?.numero]);
+
+  // Feed de calendário (usa backend pronto do PR #7)
+  useEffect(() => {
+    let alive = true;
+    async function loadCal() {
+      const today = new Date();
+      const start = new Date(today); start.setDate(start.getDate() - 7);
+      const end = new Date(today);   end.setDate(end.getDate() + 35);
+      const qs = `start=${start.toISOString().slice(0,10)}&end=${end.toISOString().slice(0,10)}`;
+      try {
+        const data = await apiGet(`${API_REPRO}/calendario?${qs}`);
+        if (!alive) return;
+        setAgenda(Array.isArray(data?.itens) ? data.itens : []);
+      } catch {
+        if (!alive) return;
+      }
+    }
+    loadCal();
+    return () => { alive = false; };
+  }, []);
 
   // ---- usa historico remoto (do backend) se disponível; senão o do prop:
   const histMerged = useMemo(() => {
