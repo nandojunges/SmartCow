@@ -5,6 +5,10 @@ import { z } from '../validate.js';
 import { makeValidator } from '../validate.js';
 import { makeCrudRouter } from './crudRouter.js';
 
+// Garantia: este recurso **não** cria eventos reprodutivos (fonte é reproduzão.resource).
+// Somente mantém/calc DERIVADOS: situacao_reprodutiva, ultima_ia, previsao_parto,
+// protocolo/aplicacao atuais, etc. — reutilizando helpers já existentes.
+
 /* ================= helpers ================= */
 function extractUserId(req) {
   const u = req.user || req.auth || {};
