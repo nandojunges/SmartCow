@@ -154,6 +154,19 @@ const eventoUpdateSchema = eventoCreateSchema.partial();
 const DIAS_GESTACAO = 283;
 const RULES = { DG30:{min:28,max:40}, DG60:{min:56,max:70} };
 
+function _diasEntre(isoA, isoB){
+  const a = new Date(isoA), b = new Date(isoB);
+  return Math.round((b - a)/86400000);
+}
+function _dgJanelaValida({ iaData, janela, dgData }){
+  const d = _diasEntre(iaData, dgData);
+  if (janela === 'DG30') return d >= 28 && d <= 40;
+  if (janela === 'DG60') return d >= 56 && d <= 70;
+  if (janela === 'DG90') return d >= 84 && d <= 100; // opcional
+  if (janela === 'DOPPLER') return true; // liberar doppler
+  return true;
+}
+
 function calculaPrevisaoParto({ dataIA, dataDiagnostico, diasGestacao }) {
   try {
     if (dataIA) {
@@ -615,15 +628,14 @@ router.post('/diagnostico', async (req, res) => {
 
   const dxISO = toISODateString(ev.data);
   const iaRef = await lastIaBefore(null, ev.animal_id, dxISO, uid);
-  if (!iaRef) return res.status(422).json({ error:'NoIA', detail:'Não existe IA anterior para parear o diagnóstico.' });
+  if (!iaRef) return res.status(422).json({ error:'Sem IA anterior para parear.' });
 
-  const diff = Math.floor((new Date(dxISO) - new Date(iaRef.data)) / 86400000);
-  let janela = null;
-  if (diff >= RULES.DG30.min && diff <= RULES.DG30.max) janela='DG30';
-  else if (diff >= RULES.DG60.min && diff <= RULES.DG60.max) janela='DG60';
-  else return res.status(422).json({ error:'JanelaInvalida', detail:`DG com ${diff} dias da IA. Esperado 28–40 (DG30) ou 56–70 (DG60).` });
+  const janela = ev.detalhes?.janela;
+  if (janela && !_dgJanelaValida({ iaData: iaRef.data, janela, dgData: dxISO })) {
+    return res.status(422).json({ error:`DG fora da janela para ${janela}.` });
+  }
 
-  const detalhes = { ...(ev.detalhes||{}), janela, ia_ref_data: iaRef.data, ia_ref_id: iaRef.id || null };
+  const detalhes = { ...(ev.detalhes||{}), ia_ref_data: iaRef.data, ia_ref_id: iaRef.id || null };
 
   const cols = [], vals = [], params = [];
   if (EVT_ANIM_COL) { cols.push(`"${EVT_ANIM_COL}"`); params.push(ev.animal_id); vals.push(`$${params.length}`); }
