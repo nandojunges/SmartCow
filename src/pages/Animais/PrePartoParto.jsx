@@ -205,6 +205,7 @@ function ModalIniciarPreParto({ animal, diasDefault = 30, onCancelar, onSalvo })
         },
       });
       window.dispatchEvent(new Event("animaisAtualizados"));
+      window.dispatchEvent(new Event("atualizarCalendario"));
       onSalvo?.();
     } catch (e) {
       console.error("Erro ao iniciar pré-parto:", e);
@@ -347,6 +348,7 @@ function ModalBezerros({ vaca, dadosMae, onCancelar, onFinalizado }) {
       }
 
       window.dispatchEvent(new Event("animaisAtualizados"));
+      window.dispatchEvent(new Event("atualizarCalendario"));
       onFinalizado?.();
     } catch (e) {
       console.error("Erro ao finalizar parto:", e);

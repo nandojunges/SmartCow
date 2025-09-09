@@ -767,6 +767,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
         }
         if(Object.keys(mapSel).length) setDecisaoPorAnimal(prev=>({ ...prev, ...mapSel }));
       }
+      window.dispatchEvent(new Event("atualizarCalendario"));
     } catch (e) {
       console.warn("Refresh animais falhou:", e?.message);
     }
