@@ -54,6 +54,13 @@ function parseBR(str) {
   const dt = new Date(y, m - 1, d);
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
+function toISODateLocal(dt) {
+  if (!dt) return null;
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 function formatBR(dt){ return dt ? dt.toLocaleDateString("pt-BR") : "—"; }
 function addDays(dt, n){ const d = new Date(dt.getTime()); d.setDate(d.getDate()+n); return d; }
 function subDays(dt, n){ const d = new Date(dt.getTime()); d.setDate(d.getDate()-n); return d; }
@@ -66,9 +73,11 @@ function diasDesde(brDate){
   const dt = parseBR(brDate); if (!dt) return "—";
   return String(Math.max(0, Math.round((Date.now()-dt.getTime())/DAY)));
 }
-function calcPrevisaoParto({ previsao_parto, ultima_ia }){
-  const pp = parseBR(previsao_parto); if (pp) return pp;
-  const ia = parseBR(ultima_ia); return ia ? addDays(ia, 280) : null;
+function calcPrevisaoParto(v){
+  const previsao = v?.previsao_parto ?? v?.previsaoParto;
+  const ultimaIA = v?.ultima_ia ?? v?.ultimaIA;
+  const pp = parseBR(previsao); if (pp) return pp;
+  const ia = parseBR(ultimaIA); return ia ? addDays(ia, 280) : null;
 }
 const fmtDigitDate = (v) => {
   const s = String(v || "").replace(/\D/g, "").slice(0, 8);
@@ -127,17 +136,33 @@ function ModalSecagem({ animal, onClose, onSaved }) {
 
   const salvar = async () => {
     if (!data || !plano?.value) { setErro("Preencha Data e Plano."); return; }
+    const dt = parseBR(data);
+    if (!dt) { setErro("Data inválida (use dd/mm/aaaa)."); return; }
+
     setErro(""); setSaving(true);
     try {
-      const dataISO = parseBR(data)?.toISOString().slice(0, 10);
-      // envia direto para o recurso de Reprodução
-      await api.post('/api/v1/reproducao/secagem', {
+      // garante YYYY-MM-DD sem fuso
+      const dataISO = toISODateLocal(dt);
+
+      // grava no recurso de Reprodução (salva evento SECAGEM)
+      await api.post("/api/v1/reproducao/secagem", {
         animal_id: animal.id,
         data: dataISO,
-        detalhes: { plano: plano.value, obs: observacoes || undefined },
+        detalhes: {
+          plano: plano.value,
+          medicamento: medicamento?.value || undefined,
+          responsavel: responsavel?.value || undefined,
+          principio_ativo: principioAtivo || undefined,
+          carencia_leite: carenciaLeite || undefined,
+          carencia_carne: carenciaCarne || undefined,
+          obs: observacoes || undefined,
+        },
       });
+
       onSaved?.();
       onClose?.();
+
+      // força recarregar listas que dependem do estado produtivo
       window.dispatchEvent(new Event("animaisAtualizados"));
     } catch (e) {
       console.error("Erro ao salvar secagem:", e);
@@ -353,7 +378,7 @@ export default function Secagem({ animais = [], onCountChange }) {
   };
 
   function classificarPorJanela(v, J, A) {
-    const pp = calcPrevisaoParto({ previsao_parto: v.previsao_parto, ultima_ia: v.ultima_ia });
+    const pp = calcPrevisaoParto(v);
     if (!pp) return { bucket: 3, diasAteSec: Infinity, pp, prevSec: null };
     const prevSec = subDays(pp, A);
     const diasAteSec = Math.floor((prevSec.getTime() - hoje.getTime()) / DAY);
