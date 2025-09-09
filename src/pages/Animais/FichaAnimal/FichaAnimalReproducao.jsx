@@ -49,12 +49,6 @@ async function apiPost(url, payload) {
 }
 
 // ações: usam as rotas do backend (validações de janela/422 já no PR #6)
-async function registrarIA(payload){ return apiPost(`${API_REPRO}/ia`, payload); }
-async function registrarDG(payload){ return apiPost(`${API_REPRO}/diagnostico`, payload); }
-async function aplicarProtocolo(payload){ return apiPost(`${API_REPRO}/aplicar-protocolo`, payload); }
-async function iniciarTratamento(payload){ return apiPost(`${API_REPRO}/tratamento`, payload); }
-async function registrarSecagem(payload){ return apiPost(`${API_REPRO}/secagem`, payload); }
-async function registrarParto(payload){ return apiPost(`${API_REPRO}/parto`, payload); }
 
 /* ========= Datas ========= */
 const DAY = 86400000;
@@ -281,6 +275,13 @@ export default function FichaAnimalReproducao({ animal }) {
   const [eventos, setEventos] = useState([]);
   const [animalDeriv, setAnimalDeriv] = useState(null);
   const [agenda, setAgenda] = useState([]);
+  const [range, setRange] = useState(() => {
+    const today = new Date();
+    const start = new Date(today); start.setDate(start.getDate()-7);
+    const end = new Date(today); end.setDate(end.getDate()+35);
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return { start: iso(start), end: iso(end) };
+  });
 
   // carregar ciclos editados (local)
   useEffect(() => { setCiclosEditados(getCiclosLS(animal?.numero || "vaca")); }, [animal?.numero]);
@@ -319,6 +320,8 @@ export default function FichaAnimalReproducao({ animal }) {
     const anim = await apiGet(`${API_ANIM}/${encodeURIComponent(id)}`);
     setAnimalDeriv(anim);
 
+    await carregarCalendario(id);
+
     // notifica que veio atualização (para outras telas que escutam)
     window.dispatchEvent(new Event("registroReprodutivoAtualizado"));
   }
@@ -330,25 +333,76 @@ export default function FichaAnimalReproducao({ animal }) {
     return () => window.removeEventListener("registroReprodutivoAtualizado", h);
   }, [animal?.id, animal?.numero]);
 
-  // Feed de calendário (usa backend pronto do PR #7)
+  async function carregarCalendario(id = animalId) {
+    if (!id) return;
+    const qs = `start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}`;
+    const data = await apiGet(`${API_REPRO}/calendario?${qs}`);
+    const itens = Array.isArray(data?.itens) ? data.itens : [];
+    const mine = itens.filter(it => !it.animal_id || String(it.animal_id) === String(id));
+    setAgenda(normalizarTarefasCalendario(mine));
+  }
+
   useEffect(() => {
-    let alive = true;
-    async function loadCal() {
-      const today = new Date();
-      const start = new Date(today); start.setDate(start.getDate() - 7);
-      const end = new Date(today);   end.setDate(end.getDate() + 35);
-      const qs = `start=${start.toISOString().slice(0,10)}&end=${end.toISOString().slice(0,10)}`;
-      try {
-        const data = await apiGet(`${API_REPRO}/calendario?${qs}`);
-        if (!alive) return;
-        setAgenda(Array.isArray(data?.itens) ? data.itens : []);
-      } catch {
-        if (!alive) return;
+    carregarCalendario();
+    const h = () => carregarCalendario();
+    window.addEventListener('atualizarCalendario', h);
+    window.addEventListener('registroReprodutivoAtualizado', h);
+    return () => {
+      window.removeEventListener('atualizarCalendario', h);
+      window.removeEventListener('registroReprodutivoAtualizado', h);
+    };
+  }, [range.start, range.end, animalId]);
+
+  function normalizarTarefasCalendario(itens) {
+    return (itens || []).map(raw => {
+      const tipo = raw.tipo;
+      const map = {
+        PROTOCOLO_ETAPA: { cor:'#7c3aed', ic:'🧪', rot:'Etapa de Protocolo' },
+        TRATAMENTO:      { cor:'#f59e0b', ic:'💊', rot:'Dose de Tratamento' },
+        PREV_DG30:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG30' },
+        PREV_DG60:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG60' },
+        PRE_PARTO_INICIO:{ cor:'#22c55e', ic:'🌿', rot:'Início Pré-Parto' },
+        PARTO_PREVISTO:  { cor:'#22c55e', ic:'👶', rot:'Parto Previsto' }
+      };
+      const meta = map[tipo] || { cor:'#64748b', ic:'📌', rot:tipo };
+      const tip = {
+        data: raw.data,
+        tipo,
+        protocolo: raw.origem_protocolo || raw.protocolo_id,
+        aplicacao: raw.aplicacao_id,
+        ref_ia: raw.ref_ia,
+        observacao: raw.detalhes?.observacao
+      };
+      return {
+        ...raw,
+        _ui: { cor: meta.cor, icone: meta.ic, rotulo: meta.rot, tooltip: tip },
+        _cancellable: Boolean(raw.aplicacao_id || raw.id || raw.evento_id)
+      };
+    }).sort((a,b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0));
+  }
+
+  async function cancelarTarefa(t) {
+    try {
+      if (t.aplicacao_id) {
+        await apiDelete(`${API_REPRO}/aplicacao/${t.aplicacao_id}`);
+      } else if (t.evento_id || t.id) {
+        const idDel = t.evento_id || t.id;
+        await apiDelete(`${API_REPRO}/eventos/${idDel}`);
+      } else {
+        return;
       }
+      await carregarCalendario();
+    } catch (e) {
+      console.error(e);
     }
-    loadCal();
-    return () => { alive = false; };
-  }, []);
+  }
+
+  async function registrarIA(payload){ const r=await apiPost(`${API_REPRO}/ia`, payload); await carregarCalendario(); return r; }
+  async function registrarDG(payload){ const r=await apiPost(`${API_REPRO}/diagnostico`, payload); await carregarCalendario(); return r; }
+  async function aplicarProtocolo(payload){ const r=await apiPost(`${API_REPRO}/aplicar-protocolo`, payload); await carregarCalendario(); return r; }
+  async function iniciarTratamento(payload){ const r=await apiPost(`${API_REPRO}/tratamento`, payload); await carregarCalendario(); return r; }
+  async function registrarSecagem(payload){ const r=await apiPost(`${API_REPRO}/secagem`, payload); await carregarCalendario(); return r; }
+  async function registrarParto(payload){ const r=await apiPost(`${API_REPRO}/parto`, payload); await carregarCalendario(); return r; }
 
   // ---- usa historico remoto (do backend) se disponível; senão o do prop:
   const histMerged = useMemo(() => {
@@ -531,6 +585,48 @@ export default function FichaAnimalReproducao({ animal }) {
             <LinhaDoTempoCompacta eventos={eventosLinha}/>
             <LegendTimeline/>
           </Card>
+
+          {/* Calendário — apresentação de tarefas */}
+          <section className="mt-6">
+            <header style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+              <strong>Calendário (tarefas)</strong>
+              <input type="date" value={range.start} onChange={e=>setRange(r=>({...r,start:e.target.value}))}/>
+              <span>→</span>
+              <input type="date" value={range.end} onChange={e=>setRange(r=>({...r,end:e.target.value}))}/>
+              <button onClick={carregarCalendario}>Atualizar</button>
+            </header>
+
+            {/* Agrupa por dia */}
+            {Object.entries(agenda.reduce((acc,t)=>{
+              (acc[t.data]??=[]).push(t); return acc;
+            }, {})).map(([dia, itens])=>(
+              <div key={dia} style={{marginBottom:12}}>
+                <div style={{fontWeight:600, opacity:.8, marginBottom:4}}>{dia}</div>
+                {itens.map((t,i)=>(
+                  <div key={i} style={{
+                    display:'flex', alignItems:'center', gap:8,
+                    padding:'6px 8px', borderRadius:8, border:'1px solid #e5e7eb'
+                  }}>
+                    <span style={{fontSize:18}}>{t._ui.icone}</span>
+                    <span style={{width:10,height:10,borderRadius:999,background:t._ui.cor}}/>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:600}}>{t._ui.rotulo}</div>
+                      <div style={{fontSize:12,opacity:.8}}>
+                        {t._ui.tooltip?.protocolo ? `Protocolo: ${t._ui.tooltip.protocolo} • ` : ''}
+                        {t._ui.tooltip?.ref_ia ? `Ref IA: ${t._ui.tooltip.ref_ia} • ` : ''}
+                        {t._ui.tooltip?.observacao ? t._ui.tooltip.observacao : ''}
+                      </div>
+                    </div>
+                    {t._cancellable && (
+                      <button onClick={()=>cancelarTarefa(t)} style={{fontSize:12}}>
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </section>
 
           <Card title="DEL por Lactação (dias)">
             <GraficoDELporLactacao delPorCiclo={delPorCiclo}/>
