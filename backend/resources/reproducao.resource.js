@@ -5,6 +5,9 @@ import { z } from '../validate.js';
 import { makeValidator } from '../validate.js';
 import { makeCrudRouter } from './crudRouter.js';
 
+// placeholder simple emitter (no-op)
+function emitir(){}
+
 /* ================= helpers ================= */
 function extractUserId(req) {
   const u = req.user || req.auth || {};
@@ -545,24 +548,119 @@ const evtCfg = {
 };
 
 /* =================== Views =================== */
-router.get('/eventos/animal/:animalId', async (req, res) => {
-  if (!EVT_ANIM_COL || !EVT_DATA) return res.json({ items: [] });
+
+router.post('/aplicar-protocolo', async (req, res) => {
   const uid = extractUserId(req);
-  if (HAS_OWNER_EVT && !uid) return res.status(401).json({ error: 'Unauthorized' });
+  if (HAS_OWNER_EVT && !uid) return res.status(401).json({ error:'Unauthorized' });
+  try{
+    const { animal_id, data, protocolo_id, tipo, parent_aplicacao_id, etapas = [], detalhes = {} } = req.body || {};
+    if (!animal_id || !data || !protocolo_id) return res.status(400).json({ error:'Missing fields' });
+    // salvar cada etapa como PROTOCOLO_ETAPA, propagando metadados
+    const baseDet = { ...detalhes, origem_protocolo: String(protocolo_id), tipo, parent_aplicacao_id };
+    const created = [];
+    for (const etapa of etapas){
+      const det = { ...baseDet, ...etapa };
+      const cols = [], vals = [], params = [];
+      if (EVT_ANIM_COL){ cols.push(`"${EVT_ANIM_COL}"`); params.push(animal_id); vals.push(`$${params.length}`); }
+      if (EVT_DATA){ cols.push(`"${EVT_DATA}"`); params.push(etapa.data || data); vals.push(`$${params.length}`); }
+      if (EVT_TIPO){ cols.push(`"${EVT_TIPO}"`); params.push('PROTOCOLO_ETAPA'); vals.push(`$${params.length}`); }
+      if (EVT_DETALHES){ cols.push(`"${EVT_DETALHES}"`); params.push(JSON.stringify(det)); vals.push(`$${params.length}::jsonb`); }
+      if (EVT_PROTO_ID){ cols.push(`"${EVT_PROTO_ID}"`); params.push(protocolo_id); vals.push(`$${params.length}`); }
+      if (EVT_APLIC_ID){ cols.push(`"${EVT_APLIC_ID}"`); params.push(parent_aplicacao_id || null); vals.push(`$${params.length}`); }
+      if (HAS_OWNER_EVT){ cols.push('owner_id'); params.push(uid); vals.push(`$${params.length}`); }
+      if (HAS_UPD_EVT){ cols.push('updated_at'); vals.push('NOW()'); }
+      const sql = `INSERT INTO "${T_EVT}" (${cols.join(',')}) VALUES (${vals.join(',')}) RETURNING *`;
+      const { rows } = await db.query(sql, params);
+      created.push(rows[0]);
+    }
+    emitir('registroReprodutivoAtualizado', { animal_id });
+    emitir('atualizarCalendario', { animal_id });
+    return res.status(201).json({ etapas: created });
+  }catch(err){
+    return res.status(500).json({ error:'InternalError', detail:String(err?.message||err) });
+  }
+});
 
-  const { animalId } = req.params || {};
-  const where = [`"${EVT_ANIM_COL}" = $1`];
-  const params = [animalId];
-  if (HAS_OWNER_EVT) { where.push(`owner_id = $2`); params.push(uid); }
-
-  const sql = `
-    SELECT ${evtListFields.length ? evtListFields.map(f => `"${f}"`).join(', ') : '*'}
-      FROM "${T_EVT}"
-     WHERE ${where.join(' AND ')}
-  ORDER BY "${EVT_DATA}" DESC ${HAS_CREATED_EVT ? ', "created_at" DESC' : ''}
-  `;
-  const { rows } = await db.query(sql, params);
-  res.json({ items: rows });
+// GET /api/v1/reproducao/calendario?start=YYYY-MM-DD&end=YYYY-MM-DD
+router.get('/calendario', async (req, res) => {
+  const uid = extractUserId(req);
+  if (HAS_OWNER_EVT && !uid) return res.status(401).json({ error:'Unauthorized' });
+  try{
+    const { start, end } = req.query || {};
+    if (!start || !end) return res.status(400).json({ error:'Missing range' });
+    // 1) Etapas de protocolo e doses de tratamento no range
+    const { rows: evts } = await db.query(
+      `SELECT * FROM ${T_EVT}
+       WHERE ${EVT_DATA} BETWEEN $1 AND $2
+       AND ${EVT_TIPO} IN ('PROTOCOLO_ETAPA','TRATAMENTO')` + (HAS_OWNER_EVT ? ' AND owner_id=$3' : ''),
+      HAS_OWNER_EVT ? [start, end, uid] : [start, end]
+    );
+    // 2) Previsões DG30/DG60 a partir de IAs no range expandido
+    const { rows: ias } = await db.query(
+      `SELECT * FROM ${T_EVT}
+       WHERE ${EVT_TIPO}='IA'` + (HAS_OWNER_EVT ? ' AND owner_id=$1' : ''),
+      HAS_OWNER_EVT ? [uid] : []
+    );
+    const preds = [];
+    for (const ia of ias){
+      const d30 = new Date(ia[EVT_DATA]); d30.setDate(d30.getDate()+30);
+      const d60 = new Date(ia[EVT_DATA]); d60.setDate(d60.getDate()+60);
+      const iso30 = d30.toISOString().slice(0,10), iso60 = d60.toISOString().slice(0,10);
+      if (iso30 >= start && iso30 <= end) preds.push({ animal_id: ia[EVT_ANIM_COL], data: iso30, tipo:'PREV_DG30', ref_ia: ia[EVT_ID] });
+      if (iso60 >= start && iso60 <= end) preds.push({ animal_id: ia[EVT_ANIM_COL], data: iso60, tipo:'PREV_DG60', ref_ia: ia[EVT_ID] });
+    }
+    // 3) Pré-parto (X dias antes) e secagem/parto previstos via animals
+    const X = 21; // pode ler de settings quando houver
+    const { rows: animais } = await db.query(
+      `SELECT ${ANIM_ID_COL} AS id, ${ANIM_PREV_PARTO} AS prev_parto
+       FROM ${T_ANIM}` + (HAS_OWNER_ANIM ? ' WHERE owner_id=$1' : ''),
+      HAS_OWNER_ANIM ? [uid] : []
+    );
+    for (const a of animais){
+      const prev = a.prev_parto && String(a.prev_parto).slice(0,10);
+      if (!prev) continue;
+      const pre = new Date(prev); pre.setDate(pre.getDate()-X);
+      const isoPre = pre.toISOString().slice(0,10);
+      if (isoPre >= start && isoPre <= end) preds.push({ animal_id: a.id, data: isoPre, tipo:'PRE_PARTO_INICIO' });
+      if (prev >= start && prev <= end) preds.push({ animal_id: a.id, data: prev, tipo:'PARTO_PREVISTO' });
+    }
+    return res.json({ itens:[...evts, ...preds] });
+  }catch(err){
+    return res.status(500).json({ error:'InternalError', detail:String(err?.message||err) });
+  }
+});
+router.get('/eventos/animal/:id', async (req, res) => {
+  const { id } = req.params;
+  // base: todos os eventos ordenados
+  const { rows } = await db.query(
+    `SELECT * FROM ${T_EVT} WHERE ${EVT_ANIM_COL}=$1 ORDER BY ${EVT_DATA} ASC, ${HAS_CREATED_EVT ? 'created_at':'id'} ASC`,
+    [id]
+  );
+  // enriquecimento: retorno de cio = IA seguinte 18–25d sem DG+ intermediário
+  const out = rows.map(r => ({ ...r, _detalhes: r[EVT_DETALHES] || {} }));
+  const ias = out.filter(e => e[EVT_TIPO]==='IA');
+  for (let i=0;i<ias.length-1;i++){
+    const a = ias[i], b = ias[i+1];
+    const gap = _diasEntre(a[EVT_DATA], b[EVT_DATA]);
+    if (gap >= 18 && gap <= 25){
+      // houve DG+ entre a e b?
+      const temDGPos = out.some(ev => ev[EVT_TIPO]==='DIAGNOSTICO'
+        && ev[EVT_RESULT]==='positivo'
+        && ev[EVT_DATA] >= a[EVT_DATA] && ev[EVT_DATA] <= b[EVT_DATA]);
+      if (!temDGPos){
+        a._detalhes = { ...(a._detalhes||{}), retorno_cio:true, ia_negativa_por_retorno:true };
+      }
+    }
+  }
+  // aliases úteis
+  const eventos = out.map(r => ({
+    id: r[EVT_ID], animal_id: r[EVT_ANIM_COL], data: r[EVT_DATA], tipo: r[EVT_TIPO],
+    detalhes: r._detalhes, resultado: r[EVT_RESULT], protocolo_id: r[EVT_PROTO_ID], aplicacao_id: r[EVT_APLIC_ID],
+    tipo_humano: r[EVT_TIPO],
+    janela_dg: r._detalhes?.janela, ia_ref_data: r._detalhes?.ia_ref_data,
+    origem_protocolo: r._detalhes?.origem_protocolo, parent_aplicacao_id: r._detalhes?.parent_aplicacao_id
+  }));
+  res.json(eventos);
 });
 
 /* =================== IA: transação + baixa de dose =================== */
