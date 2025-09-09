@@ -134,7 +134,23 @@ export default function useBuscadeCalendario() {
     if (!it) return null;
     const start = String(it.start || it.data || "").slice(0, 10);
     const end = String(it.end || it.start || it.data || start).slice(0, 10);
-    const tipo = String(it.tipo || "protocolo");
+    const rawTipo = String(it.tipo || "");
+    let tipo;
+    if (rawTipo === "PROTOCOLO_ETAPA") {
+      tipo = it?.detalhes?.hormonio ? "hormonio" : "protocolo";
+    } else if (rawTipo === "TRATAMENTO") {
+      tipo = "tratamento";
+    } else if (rawTipo === "PREV_DG30" || rawTipo === "PREV_DG60") {
+      tipo = "exame";
+    } else if (rawTipo === "PRE_PARTO_INICIO") {
+      tipo = "preparto";
+    } else if (rawTipo === "PARTO_PREVISTO") {
+      tipo = "parto";
+    } else if (rawTipo === "SECAGEM" || rawTipo === "SECAGEM_PREVISTA") {
+      tipo = "secagem";
+    } else {
+      tipo = rawTipo.toLowerCase() || "protocolo";
+    }
     const title =
       it.title ||
       it?.detalhes?.acao ||
