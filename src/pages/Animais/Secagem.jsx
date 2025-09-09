@@ -54,6 +54,12 @@ function parseBR(str) {
   const dt = new Date(y, m - 1, d);
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
+function parseISO(str) {
+  if (!str || str.length !== 10) return null;
+  const [y,m,d] = str.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return Number.isFinite(dt.getTime()) ? dt : null;
+}
 function toISODateLocal(dt) {
   if (!dt) return null;
   const y = dt.getFullYear();
@@ -72,12 +78,6 @@ function idadeTexto(nasc){
 function diasDesde(brDate){
   const dt = parseBR(brDate); if (!dt) return "—";
   return String(Math.max(0, Math.round((Date.now()-dt.getTime())/DAY)));
-}
-function calcPrevisaoParto(v){
-  const previsao = v?.previsao_parto ?? v?.previsaoParto;
-  const ultimaIA = v?.ultima_ia ?? v?.ultimaIA;
-  const pp = parseBR(previsao); if (pp) return pp;
-  const ia = parseBR(ultimaIA); return ia ? addDays(ia, 280) : null;
 }
 const fmtDigitDate = (v) => {
   const s = String(v || "").replace(/\D/g, "").slice(0, 8);
@@ -164,6 +164,7 @@ function ModalSecagem({ animal, onClose, onSaved }) {
 
       // força recarregar listas que dependem do estado produtivo
       window.dispatchEvent(new Event("animaisAtualizados"));
+      window.dispatchEvent(new Event("atualizarCalendario"));
     } catch (e) {
       console.error("Erro ao salvar secagem:", e);
       alert("❌ Erro ao salvar secagem.");
@@ -332,18 +333,33 @@ export default function Secagem({ animais = [], onCountChange }) {
     }
   }, [janelaRaw, janela]);
 
-  /* 3) Carrega lista do servidor (pega o plantel e filtramos localmente) */
+  /* 3) Carrega lista a partir do feed de calendário (SECAGEM_PREVISTA) */
   const fetchLista = useCallback(async () => {
     if (janela == null) return;
     setLoading(true); setErro("");
     try {
+      const hoje = new Date();
+      const startISO = toISODateLocal(subDays(hoje, MARGEM_ALERTA));
+      const endISO = toISODateLocal(addDays(hoje, janela));
+      const { data: calData } = await api.get("/api/v1/reproducao/calendario", { params: { start: startISO, end: endISO } });
+      const feed = Array.isArray(calData?.itens)
+        ? calData.itens.filter((it) => it.tipo === "SECAGEM_PREVISTA")
+        : [];
+      const ids = feed.map((it) => String(it.animal_id));
+      const mapa = new Map(feed.map((it) => [String(it.animal_id), it]));
       const { items } = await getAnimais({ view: "plantel", page: 1, limit: 2000 });
-      setLista(items || []);
+      const base = (items || []).filter((a) => ids.includes(String(a.id))).map((a) => ({
+        ...a,
+        _secagemPrev: mapa.get(String(a.id))?.data || mapa.get(String(a.id))?.start || null,
+      }));
+      setLista(base);
     } catch (e) {
       console.error("Erro ao carregar secagem:", e);
       setErro("Não foi possível carregar do servidor. Mostrando dados locais.");
       setLista(Array.isArray(animais) ? animais : []);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }, [janela, animais]);
 
   useEffect(() => { fetchLista(); }, [fetchLista]);
@@ -378,10 +394,10 @@ export default function Secagem({ animais = [], onCountChange }) {
   };
 
   function classificarPorJanela(v, J, A) {
-    const pp = calcPrevisaoParto(v);
-    if (!pp) return { bucket: 3, diasAteSec: Infinity, pp, prevSec: null };
-    const prevSec = subDays(pp, A);
+    const prevSec = parseISO(v._secagemPrev);
+    if (!prevSec) return { bucket: 3, diasAteSec: Infinity, pp: null, prevSec: null };
     const diasAteSec = Math.floor((prevSec.getTime() - hoje.getTime()) / DAY);
+    const pp = addDays(prevSec, A);
     if (diasAteSec < -MARGEM_ALERTA) return { bucket: 0, diasAteSec, pp, prevSec }; // atrasada
     if (diasAteSec <= J)             return { bucket: 1, diasAteSec, pp, prevSec }; // dentro da janela
     return { bucket: 2, diasAteSec, pp, prevSec };                                   // antecipada
