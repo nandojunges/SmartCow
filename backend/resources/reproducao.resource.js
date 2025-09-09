@@ -612,17 +612,21 @@ router.get('/calendario', async (req, res) => {
     const secagemOffset  = Number(req.query.secagem_offset_days || 60);
 
     const itens = [];
-    // 1) Etapas de protocolo e tratamentos (já persistidos em repro_evento)
+    // 1) Eventos já persistidos em repro_evento
     const { rows: evs } = await db.query(`
-      SELECT "${EVT_DATA}" AS data, "${EVT_TIPO}" AS tipo, "${EVT_DETALHES}" AS detalhes
-      FROM "${T_EVT}"
-      WHERE "${EVT_DATA}" >= $1 AND "${EVT_DATA}" < $2
-      ${HAS_OWNER_EVT ? 'AND owner_id = $3' : ''}
+      SELECT "${EVT_DATA}" AS data, "${EVT_TIPO}" AS tipo, "${EVT_DETALHES}" AS detalhes${EVT_ANIM_COL ? `, "${EVT_ANIM_COL}" AS animal_id` : ''}
+        FROM "${T_EVT}"
+       WHERE "${EVT_DATA}" >= $1 AND "${EVT_DATA}" < $2
+       ${HAS_OWNER_EVT ? 'AND owner_id = $3' : ''}
     `, HAS_OWNER_EVT ? [start, end, ownerId] : [start, end]);
     for (const r of evs) {
       const tipo = r.tipo;
       if (tipo === 'PROTOCOLO_ETAPA' || tipo === 'TRATAMENTO') {
-        itens.push({ start: r.data, end: r.data, allDay:true, tipo: tipo==='TRATAMENTO'?'tratamento':'hormonio', title: r.detalhes?.acao || r.detalhes?.hormonio || 'Etapa', prioridadeVisual:true, origem:'repro' });
+        itens.push({ start: r.data, end: r.data, allDay:true, tipo: tipo==='TRATAMENTO'?'tratamento':'hormonio', title: r.detalhes?.acao || r.detalhes?.hormonio || 'Etapa', prioridadeVisual:true, origem:'repro', animalId: r.animal_id });
+      } else if (tipo === 'SECAGEM') {
+        itens.push({ start: r.data, end: r.data, allDay:true, tipo:'secagem', title:'Secagem', prioridadeVisual:true, origem:'repro', animalId: r.animal_id });
+      } else if (tipo === 'PARTO') {
+        itens.push({ start: r.data, end: r.data, allDay:true, tipo:'parto', title:'Parto', prioridadeVisual:true, origem:'repro', animalId: r.animal_id });
       }
     }
     // 2) Previsões DG30/DG60 a partir de IA
@@ -912,7 +916,7 @@ router.post('/secagem', async (req, res) => {
     });
 
     await atualizarAnimalCampos({ animalId: ev.animal_id, ownerId: uid, situacaoProdutiva: 'seca' }).catch(()=>{});
-
+    emitir('tarefasAtualizadas');
     res.json({ id: item.id, data: item.data, tipo: 'SECAGEM' });
   } catch (e) {
     res.status(400).json({ error:'InternalError', detail: e?.message || 'Falha ao registrar secagem' });

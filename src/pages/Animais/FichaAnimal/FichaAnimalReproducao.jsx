@@ -364,7 +364,11 @@ export default function FichaAnimalReproducao({ animal }) {
         PRE_PARTO_INICIO:{ cor:'#22c55e', ic:'🌿', rot:'Início Pré-Parto' },
         PARTO_PREVISTO:  { cor:'#22c55e', ic:'👶', rot:'Parto Previsto' }
       };
-      const meta = map[tipo] || { cor:'#64748b', ic:'📌', rot:tipo };
+      let meta = map[tipo] || { cor:'#64748b', ic:'📌', rot:tipo };
+      if (tipo === 'secagem' || tipo === 'SECAGEM') {
+        const prev = raw.origem === 'prev';
+        meta = { cor:'#8b5cf6', ic: prev ? '📅' : '💧', rot: prev ? 'Secagem Prevista' : 'Secagem' };
+      }
       const tip = {
         data: raw.data,
         tipo,
