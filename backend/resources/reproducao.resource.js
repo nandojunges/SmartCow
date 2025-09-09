@@ -1,4 +1,4 @@
-// backend/resources/reproducao.resource.js (ESM) — IA, DG com validação, Parto, Pré-parto, Secagem, Decisão, CRUD de eventos e protocolo
+// backend/resources/reproducao.resource.js (ESM)
 import express from 'express';
 import db from '../dbx.js';
 import { z } from '../validate.js';
@@ -78,7 +78,7 @@ const HAS_UPD_INSEM   = INSEM_COLS.has('updated_at');
 const HAS_UPD_TOURO   = TOURO_COLS.has('updated_at');
 
 const HAS_CREATED_PROTO = PROTO_COLS.has('created_at');
-const HAS_CREATED_EVT   = EVT_COLS.has('created_at'); // <<< mantém só esta declaração
+const HAS_CREATED_EVT   = EVT_COLS.has('created_at');
 const HAS_CREATED_INSEM = INSEM_COLS.has('created_at');
 const HAS_CREATED_ANIM  = ANIM_COLS.has('created_at');
 
@@ -87,7 +87,15 @@ const ANIM_ID_COL = findCol(ANIM_COLS, ['id','animal_id','uuid']);
 const ANIM_SIT_REP = findCol(ANIM_COLS, [
   'situacao_reprodutiva','sit_reprodutiva','status_reprodutivo','situacao_rep','situacao_repro','estado'
 ]);
-const ANIM_SIT_PROD = findCol(ANIM_COLS, ['situacao_produtiva','sit_produtiva']);
+const ANIM_SIT_PROD = findCol(ANIM_COLS, [
+  'situacao_produtiva', 'sit_produtiva',
+  // variações comuns
+  'situacaoProdutiva', 'status_produtivo', 'estado_produtivo',
+  'statusProdutivo', 'produtivo_status'
+]);
+// fallback genérico (legado) caso não exista coluna produtiva dedicada
+const ANIM_ESTADO = findCol(ANIM_COLS, ['estado','status']);
+
 const ANIM_ULT_IA = findCol(ANIM_COLS, ['ultima_ia','data_ultima_ia','ultimaIA','ultimaIa']);
 const ANIM_PREV_PARTO = findCol(ANIM_COLS, ['previsao_parto','prev_parto','previsao_parto_dt','previsaoParto']);
 const ANIM_DECISAO = findCol(ANIM_COLS, ['decisao']);
@@ -211,7 +219,7 @@ async function getAnimalRow(animalId, ownerId) {
 /**
  * Atualiza campos do animal (derivados).
  * Aceita previsaoPartoISO === null para limpar (SET NULL).
- * Aceita situacaoProdutiva (se a tabela tiver coluna).
+ * Aceita situacaoProdutiva (se a tabela tiver coluna) — com fallback para "estado".
  * Ponteiros de protocolo/aplicação são ignorados aqui (ficam no orquestrador).
  */
 async function atualizarAnimalCampos({
@@ -236,9 +244,15 @@ async function atualizarAnimalCampos({
     params.push(situacaoReprodutiva);
   }
 
-  if (ANIM_SIT_PROD && situacaoProdutiva !== undefined) {
-    sets.push(`"${ANIM_SIT_PROD}" = $${params.length + 1}`);
-    params.push(situacaoProdutiva);
+  // produtiva: coluna dedicada OU fallback "estado"
+  if (situacaoProdutiva !== undefined) {
+    if (ANIM_SIT_PROD) {
+      sets.push(`"${ANIM_SIT_PROD}" = $${params.length + 1}`);
+      params.push(situacaoProdutiva);
+    } else if (ANIM_ESTADO) {
+      sets.push(`"${ANIM_ESTADO}" = $${params.length + 1}`);
+      params.push(situacaoProdutiva);
+    }
   }
 
   if (ANIM_PREV_PARTO && previsaoPartoISO !== undefined) {
@@ -266,12 +280,23 @@ async function atualizarAnimalCampos({
   if (HAS_UPD_ANIM) sets.push(`"updated_at" = NOW()`);
   if (!sets.length) return;
 
-  const where = [`"${ANIM_ID_COL}" = $${params.length + 1}`];
-  params.push(animalId);
-  if (HAS_OWNER_ANIM && ownerId) { where.push(`"owner_id" = $${params.length + 1}`); params.push(ownerId); }
+  // 1ª tentativa: com owner (se houver)
+  const whereWithOwner = [`"${ANIM_ID_COL}" = $${params.length + 1}`];
+  const paramsWithOwner = params.slice();
+  paramsWithOwner.push(animalId);
+  if (HAS_OWNER_ANIM && ownerId) { whereWithOwner.push(`"owner_id" = $${paramsWithOwner.length + 1}`); paramsWithOwner.push(ownerId); }
 
-  const sql = `UPDATE "${T_ANIM}" SET ${sets.join(', ')} WHERE ${where.join(' AND ')}`;
-  await runner.query(sql, params);
+  const sql1 = `UPDATE "${T_ANIM}" SET ${sets.join(', ')} WHERE ${whereWithOwner.join(' AND ')}`;
+  const r1 = await runner.query(sql1, paramsWithOwner);
+
+  // best-effort: se não atualizou nada por causa do owner, tenta sem owner
+  if ((r1.rowCount || 0) === 0 && HAS_OWNER_ANIM && ownerId) {
+    const whereNoOwner = [`"${ANIM_ID_COL}" = $${params.length + 1}`];
+    const paramsNoOwner = params.slice();
+    paramsNoOwner.push(animalId);
+    const sql2 = `UPDATE "${T_ANIM}" SET ${sets.join(', ')} WHERE ${whereNoOwner.join(' AND ')}`;
+    await runner.query(sql2, paramsNoOwner);
+  }
 }
 
 /* ========= estoque de touro ========= */
@@ -737,7 +762,7 @@ router.post('/secagem', async (req, res) => {
   const sql = `INSERT INTO "${T_EVT}" (${cols.join(',')}) VALUES (${vals.join(',')}) RETURNING ${evtListFields.map(f=>`"${f}"`).join(', ')}`;
   const { rows } = await db.query(sql, params);
 
-  // opcional: atualiza situação produtiva
+  // atualiza situação produtiva -> 'seca' (com fallback e best-effort no UPDATE)
   await atualizarAnimalCampos({ animalId: ev.animal_id, ownerId: uid, situacaoProdutiva: 'seca' }).catch(()=>{});
 
   res.json(rows[0] || {});
@@ -824,6 +849,7 @@ router.get('/animais', async (req, res) => {
       ANIM_BRINC && `a."${ANIM_BRINC}" AS "brinco"`,
       ANIM_SIT_REP   && `a."${ANIM_SIT_REP}" AS "situacaoReprodutiva"`,
       ANIM_SIT_PROD  && `a."${ANIM_SIT_PROD}" AS "situacaoProdutiva"`,
+      ANIM_ESTADO    && `a."${ANIM_ESTADO}" AS "estado"`,
       ANIM_ULT_IA    && `a."${ANIM_ULT_IA}" AS "ultimaIA"`,
       ANIM_PREV_PARTO&& `a."${ANIM_PREV_PARTO}" AS "previsaoParto"`,
       ANIM_DECISAO   && `a."${ANIM_DECISAO}" AS "decisao"`,
@@ -863,6 +889,7 @@ router.get('/animais/:id', async (req, res) => {
       ANIM_BRINC && `a."${ANIM_BRINC}" AS "brinco"`,
       ANIM_SIT_REP   && `a."${ANIM_SIT_REP}" AS "situacaoReprodutiva"`,
       ANIM_SIT_PROD  && `a."${ANIM_SIT_PROD}" AS "situacaoProdutiva"`,
+      ANIM_ESTADO    && `a."${ANIM_ESTADO}" AS "estado"`,
       ANIM_ULT_IA    && `a."${ANIM_ULT_IA}" AS "ultimaIA"`,
       ANIM_PREV_PARTO&& `a."${ANIM_PREV_PARTO}" AS "previsaoParto"`,
       ANIM_DECISAO   && `a."${ANIM_DECISAO}" AS "decisao"`,
@@ -939,7 +966,8 @@ router.use('/eventos', async (req, res, next) => {
             previsaoPartoISO: null,
           });
         }
-        if (tipo === 'SECAGEM' && ANIM_SIT_PROD) {
+        if (tipo === 'SECAGEM') {
+          // usa a mesma função com fallback para "estado"
           await atualizarAnimalCampos({
             animalId: (EVT_ANIM_COL && e[EVT_ANIM_COL]) || req.body?.animal_id,
             ownerId: uid,
@@ -993,8 +1021,6 @@ const insemCfg = {
 router.use('/inseminadores', makeCrudRouter(insemCfg, db));
 
 /* =================== Integração com o ORQUESTRADOR =================== */
-// Monta dinamicamente as rotas do orquestrador dentro deste router.
-// Assim, o server não precisa importar separadamente (evita erros de path).
 try {
   const { default: protocoloRouter } = await import('./protocolo.resource.js');
   router.use(protocoloRouter);
@@ -1006,15 +1032,6 @@ try {
 export default router;
 
 /* =================== Decisões — últimas =================== */
-/**
- * Lista últimas decisões (eventos tipo 'DECISAO')
- * Aceita:
- *   - limit: número de itens (default 20, máx 200)
- *   - dias: filtra pelos últimos N dias (opcional)
- *   - animal_id: filtra por um animal específico (opcional)
- * Método: tanto POST (body JSON) quanto GET (query) funcionam.
- * Endpoint: /api/v1/reproducao/decisoes/ultimas
- */
 async function handlerUltimasDecisoes(req, res) {
   try {
     if (!EVT_TIPO || !EVT_DATA || !EVT_ANIM_COL) {
