@@ -353,6 +353,27 @@ async function consumirDoseTouroBestEffort({ touroId, ownerId }) {
   }
 }
 
+// Inserção genérica de evento reprodutivo
+async function inserirEvento({ client = db, ownerId, animal_id, dataISO, tipo, detalhes = {}, resultado = null, protocolo_id = null, aplicacao_id = null }) {
+  const cols = [];
+  const vals = [];
+  const placeholders = [];
+  let idx = 1;
+  if (EVT_ANIM_COL) { cols.push(`"${EVT_ANIM_COL}"`); vals.push(animal_id); placeholders.push(`$${idx++}`); }
+  if (EVT_DATA)     { cols.push(`"${EVT_DATA}"`);     vals.push(dataISO); placeholders.push(`$${idx++}`); }
+  if (EVT_TIPO)     { cols.push(`"${EVT_TIPO}"`);     vals.push(tipo); placeholders.push(`$${idx++}`); }
+  if (EVT_DETALHES) { cols.push(`"${EVT_DETALHES}"`); vals.push(JSON.stringify(detalhes || {})); placeholders.push(`$${idx++}`); }
+  if (EVT_RESULT && resultado !== null)   { cols.push(`"${EVT_RESULT}"`);   vals.push(resultado); placeholders.push(`$${idx++}`); }
+  if (EVT_PROTO_ID && protocolo_id !== null) { cols.push(`"${EVT_PROTO_ID}"`); vals.push(protocolo_id); placeholders.push(`$${idx++}`); }
+  if (EVT_APLIC_ID && aplicacao_id !== null) { cols.push(`"${EVT_APLIC_ID}"`); vals.push(aplicacao_id); placeholders.push(`$${idx++}`); }
+  if (HAS_OWNER_EVT && ownerId) { cols.push('owner_id'); vals.push(ownerId); placeholders.push(`$${idx++}`); }
+  const sql = `INSERT INTO "${T_EVT}" (${cols.join(',')}) VALUES (${placeholders.join(',')}) RETURNING ${EVT_ID?`"${EVT_ID}" AS id,`:''} ${EVT_DATA?`"${EVT_DATA}" AS data`:'*'};`;
+  const { rows } = await (client || db).query(sql, vals);
+  emitir('registroReprodutivoAtualizado');
+  emitir('atualizarCalendario');
+  return rows[0] || {};
+}
+
 /* =================== Router =================== */
 const router = express.Router();
 
@@ -581,52 +602,67 @@ router.post('/aplicar-protocolo', async (req, res) => {
   }
 });
 
-// GET /api/v1/reproducao/calendario?start=YYYY-MM-DD&end=YYYY-MM-DD
+// Feed de calendário unificado
 router.get('/calendario', async (req, res) => {
-  const uid = extractUserId(req);
-  if (HAS_OWNER_EVT && !uid) return res.status(401).json({ error:'Unauthorized' });
-  try{
-    const { start, end } = req.query || {};
-    if (!start || !end) return res.status(400).json({ error:'Missing range' });
-    // 1) Etapas de protocolo e doses de tratamento no range
-    const { rows: evts } = await db.query(
-      `SELECT * FROM ${T_EVT}
-       WHERE ${EVT_DATA} BETWEEN $1 AND $2
-       AND ${EVT_TIPO} IN ('PROTOCOLO_ETAPA','TRATAMENTO')` + (HAS_OWNER_EVT ? ' AND owner_id=$3' : ''),
-      HAS_OWNER_EVT ? [start, end, uid] : [start, end]
-    );
-    // 2) Previsões DG30/DG60 a partir de IAs no range expandido
-    const { rows: ias } = await db.query(
-      `SELECT * FROM ${T_EVT}
-       WHERE ${EVT_TIPO}='IA'` + (HAS_OWNER_EVT ? ' AND owner_id=$1' : ''),
-      HAS_OWNER_EVT ? [uid] : []
-    );
-    const preds = [];
-    for (const ia of ias){
-      const d30 = new Date(ia[EVT_DATA]); d30.setDate(d30.getDate()+30);
-      const d60 = new Date(ia[EVT_DATA]); d60.setDate(d60.getDate()+60);
-      const iso30 = d30.toISOString().slice(0,10), iso60 = d60.toISOString().slice(0,10);
-      if (iso30 >= start && iso30 <= end) preds.push({ animal_id: ia[EVT_ANIM_COL], data: iso30, tipo:'PREV_DG30', ref_ia: ia[EVT_ID] });
-      if (iso60 >= start && iso60 <= end) preds.push({ animal_id: ia[EVT_ANIM_COL], data: iso60, tipo:'PREV_DG60', ref_ia: ia[EVT_ID] });
+  try {
+    const ownerId = extractUserId(req);
+    const start = toISODateString(req.query.start);
+    const end   = toISODateString(req.query.end);
+    const prepartoOffset = Number(req.query.preparto_offset_days || 21);
+    const secagemOffset  = Number(req.query.secagem_offset_days || 60);
+
+    const itens = [];
+    // 1) Etapas de protocolo e tratamentos (já persistidos em repro_evento)
+    const { rows: evs } = await db.query(`
+      SELECT "${EVT_DATA}" AS data, "${EVT_TIPO}" AS tipo, "${EVT_DETALHES}" AS detalhes
+      FROM "${T_EVT}"
+      WHERE "${EVT_DATA}" >= $1 AND "${EVT_DATA}" < $2
+      ${HAS_OWNER_EVT ? 'AND owner_id = $3' : ''}
+    `, HAS_OWNER_EVT ? [start, end, ownerId] : [start, end]);
+    for (const r of evs) {
+      const tipo = r.tipo;
+      if (tipo === 'PROTOCOLO_ETAPA' || tipo === 'TRATAMENTO') {
+        itens.push({ start: r.data, end: r.data, allDay:true, tipo: tipo==='TRATAMENTO'?'tratamento':'hormonio', title: r.detalhes?.acao || r.detalhes?.hormonio || 'Etapa', prioridadeVisual:true, origem:'repro' });
+      }
     }
-    // 3) Pré-parto (X dias antes) e secagem/parto previstos via animals
-    const X = 21; // pode ler de settings quando houver
-    const { rows: animais } = await db.query(
-      `SELECT ${ANIM_ID_COL} AS id, ${ANIM_PREV_PARTO} AS prev_parto
-       FROM ${T_ANIM}` + (HAS_OWNER_ANIM ? ' WHERE owner_id=$1' : ''),
-      HAS_OWNER_ANIM ? [uid] : []
-    );
-    for (const a of animais){
-      const prev = a.prev_parto && String(a.prev_parto).slice(0,10);
-      if (!prev) continue;
-      const pre = new Date(prev); pre.setDate(pre.getDate()-X);
-      const isoPre = pre.toISOString().slice(0,10);
-      if (isoPre >= start && isoPre <= end) preds.push({ animal_id: a.id, data: isoPre, tipo:'PRE_PARTO_INICIO' });
-      if (prev >= start && prev <= end) preds.push({ animal_id: a.id, data: prev, tipo:'PARTO_PREVISTO' });
+    // 2) Previsões DG30/DG60 a partir de IA
+    const { rows: ias } = await db.query(`
+      SELECT "${EVT_ANIM_COL}" AS animal_id, "${EVT_DATA}" AS data
+      FROM "${T_EVT}" WHERE "${EVT_TIPO}"='IA'
+      ${HAS_OWNER_EVT ? 'AND owner_id = $1' : ''}
+    `, HAS_OWNER_EVT ? [ownerId] : []);
+    for (const ia of ias) {
+      const d = new Date(ia.data);
+      const d30 = new Date(d); d30.setDate(d30.getDate()+30);
+      const d60 = new Date(d); d60.setDate(d60.getDate()+60);
+      const mk = (iso, janela) => ({ start: iso, end: iso, allDay:true, tipo:'exame', title: janela, prioridadeVisual:true, origem:'prev', animalId: ia.animal_id });
+      const iso30 = d30.toISOString().slice(0,10);
+      const iso60 = d60.toISOString().slice(0,10);
+      if (iso30 >= start && iso30 < end) itens.push(mk(iso30, 'DG30'));
+      if (iso60 >= start && iso60 < end) itens.push(mk(iso60, 'DG60'));
     }
-    return res.json({ itens:[...evts, ...preds] });
-  }catch(err){
-    return res.status(500).json({ error:'InternalError', detail:String(err?.message||err) });
+    // 3) Pré-parto, Secagem prevista e Parto previsto a partir de animals.previsao_parto
+    if (ANIM_PREV_PARTO) {
+      const { rows: prenhes } = await db.query(`
+        SELECT "${ANIM_ID_COL}" AS id, "${ANIM_PREV_PARTO}" AS prev_parto, ${ANIM_SIT_REP?`"${ANIM_SIT_REP}" AS sit_rep,`:''} ${ANIM_SIT_PROD?`"${ANIM_SIT_PROD}" AS sit_prod`:''}
+        FROM "${T_ANIM}" WHERE "${ANIM_PREV_PARTO}" IS NOT NULL
+        ${HAS_OWNER_ANIM ? 'AND owner_id = $1' : ''}
+      `, HAS_OWNER_ANIM ? [ownerId] : []);
+      for (const a of prenhes) {
+        const partoIso = new Date(a.prev_parto).toISOString().slice(0,10);
+        const preIso = (()=>{ const d=new Date(a.prev_parto); d.setDate(d.getDate()-prepartoOffset); return d.toISOString().slice(0,10); })();
+        const secaIso = (()=>{ const d=new Date(a.prev_parto); d.setDate(d.getDate()-secagemOffset); return d.toISOString().slice(0,10); })();
+        if (partoIso >= start && partoIso < end) itens.push({ start: partoIso, end: partoIso, allDay:true, tipo:'parto', title:'Parto previsto', prioridadeVisual:true, origem:'prev', animalId: a.id });
+        if (preIso   >= start && preIso   < end) itens.push({ start: preIso, end: preIso, allDay:true, tipo:'preparto', title:'Início de pré-parto', prioridadeVisual:true, origem:'prev', animalId: a.id });
+        if (a.sit_prod?.toLowerCase?.().includes('lact')) {
+          if (secaIso  >= start && secaIso  < end) itens.push({ start: secaIso, end: secaIso, allDay:true, tipo:'secagem', title:'Secar vaca', prioridadeVisual:true, origem:'prev', animalId: a.id });
+        }
+      }
+    }
+    emitir('tarefasAtualizadas');
+    return res.json({ ok:true, itens });
+  } catch (e) {
+    return res.status(400).json({ ok:false, message: e.message || 'Falha no feed de calendário' });
   }
 });
 router.get('/eventos/animal/:id', async (req, res) => {
@@ -829,26 +865,29 @@ router.post('/parto', async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: 'ValidationError', issues: parsed.error.issues });
   const ev = parsed.data;
 
-  const cols = [], vals = [], params = [];
-  if (EVT_ANIM_COL) { cols.push(`"${EVT_ANIM_COL}"`); params.push(ev.animal_id); vals.push(`$${params.length}`); }
-  if (EVT_DATA)     { cols.push(`"${EVT_DATA}"`);     params.push(toISODateString(ev.data)); vals.push(`$${params.length}`); }
-  if (EVT_TIPO)     { cols.push(`"${EVT_TIPO}"`);     params.push('PARTO'); vals.push(`$${params.length}`); }
-  if (EVT_DETALHES) { cols.push(`"${EVT_DETALHES}"`); params.push(JSON.stringify(ev.detalhes || {})); vals.push(`$${params.length}::jsonb`); }
-  if (HAS_OWNER_EVT){ cols.push('owner_id'); params.push(uid); vals.push(`$${params.length}`); }
-  if (HAS_UPD_EVT)  { cols.push('updated_at'); vals.push('NOW()'); }
-  if (HAS_CREATED_EVT){ cols.push('created_at'); vals.push('NOW()'); }
+  try {
+    const item = await inserirEvento({
+      ownerId: uid,
+      animal_id: ev.animal_id,
+      dataISO: toISODateString(ev.data),
+      tipo: 'PARTO',
+      detalhes: ev.detalhes || {},
+      resultado: ev.resultado ?? null,
+      protocolo_id: ev.protocolo_id ?? null,
+      aplicacao_id: ev.aplicacao_id ?? null,
+    });
 
-  const sql = `INSERT INTO "${T_EVT}" (${cols.join(', ')}) VALUES (${vals.join(', ')}) RETURNING ${evtListFields.length ? evtListFields.map(f=>`"${f}"`).join(', ') : '*'};`;
-  const { rows } = await db.query(sql, params);
-  const novo = rows[0] || {};
-
-  await atualizarAnimalCampos({
-    animalId: ev.animal_id,
-    ownerId: uid,
-    situacaoReprodutiva: ANIM_SIT_REP ? 'pos-parto' : null,
-    previsaoPartoISO: null,
-  });
-  res.json(novo);
+    await atualizarAnimalCampos({
+      animalId: ev.animal_id,
+      ownerId: uid,
+      situacaoReprodutiva: ANIM_SIT_REP ? 'pos-parto' : null,
+      previsaoPartoISO: null,
+    });
+    emitir('tarefasAtualizadas');
+    res.json({ id: item.id, data: item.data, tipo: 'PARTO' });
+  } catch (e) {
+    res.status(400).json({ error: 'InternalError', detail: e?.message || 'Falha ao registrar parto' });
+  }
 });
 
 /* =================== SECAGEM =================== */
@@ -860,22 +899,24 @@ router.post('/secagem', async (req, res) => {
   if (!p.success) return res.status(400).json({ error:'ValidationError', issues:p.error.issues });
   const ev = p.data;
 
-  const cols=[], vals=[], params=[];
-  if (EVT_ANIM_COL){ cols.push(`"${EVT_ANIM_COL}"`); params.push(ev.animal_id); vals.push(`$${params.length}`); }
-  if (EVT_DATA){ cols.push(`"${EVT_DATA}"`); params.push(toISODateString(ev.data)); vals.push(`$${params.length}`); }
-  if (EVT_TIPO){ cols.push(`"${EVT_TIPO}"`); params.push('SECAGEM'); vals.push(`$${params.length}`); }
-  if (EVT_DETALHES){ cols.push(`"${EVT_DETALHES}"`); params.push(JSON.stringify(ev.detalhes||{})); vals.push(`$${params.length}::jsonb`); }
-  if (HAS_OWNER_EVT){ cols.push('owner_id'); params.push(uid); vals.push(`$${params.length}`); }
-  if (HAS_UPD_EVT){ cols.push('updated_at'); vals.push('NOW()'); }
-  if (HAS_CREATED_EVT){ cols.push('created_at'); vals.push('NOW()'); }
+  try {
+    const item = await inserirEvento({
+      ownerId: uid,
+      animal_id: ev.animal_id,
+      dataISO: toISODateString(ev.data),
+      tipo: 'SECAGEM',
+      detalhes: ev.detalhes || {},
+      resultado: ev.resultado ?? null,
+      protocolo_id: ev.protocolo_id ?? null,
+      aplicacao_id: ev.aplicacao_id ?? null,
+    });
 
-  const sql = `INSERT INTO "${T_EVT}" (${cols.join(',')}) VALUES (${vals.join(',')}) RETURNING ${evtListFields.map(f=>`"${f}"`).join(', ')}`;
-  const { rows } = await db.query(sql, params);
+    await atualizarAnimalCampos({ animalId: ev.animal_id, ownerId: uid, situacaoProdutiva: 'seca' }).catch(()=>{});
 
-  // atualiza situação produtiva -> 'seca' (com fallback e best-effort no UPDATE)
-  await atualizarAnimalCampos({ animalId: ev.animal_id, ownerId: uid, situacaoProdutiva: 'seca' }).catch(()=>{});
-
-  res.json(rows[0] || {});
+    res.json({ id: item.id, data: item.data, tipo: 'SECAGEM' });
+  } catch (e) {
+    res.status(400).json({ error:'InternalError', detail: e?.message || 'Falha ao registrar secagem' });
+  }
 });
 
 /* =================== “Decisão” =================== */

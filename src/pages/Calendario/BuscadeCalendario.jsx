@@ -131,48 +131,35 @@ export default function useBuscadeCalendario() {
 
   // Mapper: feed -> evento FullCalendar
   function mapFeedItemToEvent(it) {
-    const d = String(it?.data || "").slice(0, 10);
-    let tipo = "protocolo";
-    const t = String(it?.tipo || "").toUpperCase();
-    if (t === "PROTOCOLO_ETAPA") {
-      const hasH = !!(it?.detalhes?.hormonio);
-      tipo = hasH ? "hormonio" : "protocolo";
-    } else if (t === "TRATAMENTO") {
-      tipo = "tratamento";
-    } else if (t === "PREV_DG30" || t === "PREV_DG60") {
-      tipo = "exame";
-    } else if (t === "PRE_PARTO_INICIO") {
-      tipo = "preparto";
-    } else if (t === "PARTO_PREVISTO") {
-      tipo = "parto";
-    } else if (t === "SECAGEM") {
-      tipo = "secagem";
-    }
+    if (!it) return null;
+    const start = String(it.start || it.data || "").slice(0, 10);
+    const end = String(it.end || it.start || it.data || start).slice(0, 10);
+    const tipo = String(it.tipo || "protocolo");
     const title =
-      it?.detalhes?.acao ? it.detalhes.acao :
-      it?.detalhes?.hormonio ? `Aplicar ${it.detalhes.hormonio}` :
-      it?.origem_protocolo ? `Protocolo ${it.origem_protocolo}` :
-      it?.resultado ? `DG ${it.resultado}` :
-      t;
+      it.title ||
+      it?.detalhes?.acao ||
+      it?.detalhes?.hormonio ||
+      it?.origem_protocolo ||
+      it?.resultado ||
+      tipo;
     return {
-      id: it.id || `${t}-${d}-${it?.animal_id || "x"}`,
-      start: d,
-      end: d,
-      allDay: true,
+      id: it.id || `${tipo}-${start}-${title || ""}`,
+      start,
+      end,
+      allDay: it.allDay !== false,
       tipo,
       title,
-      prioridadeVisual: true,
-      // extras úteis
-      animalId: it.animal_id ?? null,
-      protocoloId: it.protocolo_id ?? null,
-      aplicacaoId: it.aplicacao_id ?? it.parent_aplicacao_id ?? null,
-      refIa: it.ref_ia ?? it.detalhes?.ia_ref_id ?? null,
+      prioridadeVisual: it.prioridadeVisual !== false,
+      animalId: it.animalId ?? it.animal_id ?? null,
+      protocoloId: it.protocoloId ?? it.protocolo_id ?? null,
+      aplicacaoId: it.aplicacaoId ?? it.aplicacao_id ?? it.parent_aplicacao_id ?? null,
+      refIa: it.refIa ?? it.ref_ia ?? it.detalhes?.ia_ref_id ?? null,
     };
   }
 
   // AGREGA tarefas iguais e ANEXA a lista de animais
   const eventos = useMemo(() => {
-    const baseFeed = (feed || []).map(mapFeedItemToEvent);
+    const baseFeed = (feed || []).map(mapFeedItemToEvent).filter(Boolean);
     const base = [...baseFeed, ...manuais];
 
     const map = new Map();
