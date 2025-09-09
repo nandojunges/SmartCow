@@ -362,13 +362,11 @@ export default function FichaAnimalReproducao({ animal }) {
         PREV_DG30:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG30' },
         PREV_DG60:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG60' },
         PRE_PARTO_INICIO:{ cor:'#22c55e', ic:'🌿', rot:'Início Pré-Parto' },
-        PARTO_PREVISTO:  { cor:'#22c55e', ic:'👶', rot:'Parto Previsto' }
+        PARTO_PREVISTO:  { cor:'#22c55e', ic:'👶', rot:'Parto Previsto' },
+        SECAGEM:         { cor:'#7e22ce', ic:'🟣', rot:'Secagem' },
+        SECAGEM_PREVISTA:{ cor:'#a78bfa', ic:'🟣', rot:'Secagem Prevista' },
       };
       let meta = map[tipo] || { cor:'#64748b', ic:'📌', rot:tipo };
-      if (tipo === 'secagem' || tipo === 'SECAGEM') {
-        const prev = raw.origem === 'prev';
-        meta = { cor:'#8b5cf6', ic: prev ? '📅' : '💧', rot: prev ? 'Secagem Prevista' : 'Secagem' };
-      }
       const tip = {
         data: raw.data,
         tipo,
@@ -541,6 +539,7 @@ export default function FichaAnimalReproducao({ animal }) {
   /* ===== Ações backend ===== */
   async function excluirEventoById(id) {
     await apiDelete(`${API_REPRO}/eventos/${encodeURIComponent(id)}`);
+    await carregarCalendario();
   }
   async function cancelarAplicacao(aplicacaoId) {
     await apiDelete(`${API_REPRO}/aplicacao/${encodeURIComponent(aplicacaoId)}`);
@@ -549,6 +548,7 @@ export default function FichaAnimalReproducao({ animal }) {
     window.dispatchEvent(new Event("registroReprodutivoAtualizado"));
     window.dispatchEvent(new Event("atualizarCalendario"));
     window.dispatchEvent(new Event("tarefasAtualizadas"));
+    await carregarCalendario();
   }
 
   function normalizaTipo(t) {

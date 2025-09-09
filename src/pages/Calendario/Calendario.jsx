@@ -46,6 +46,10 @@ export default function Calendario() {
     return { domNodes: [ (() => {
       const img = document.createElement("img");
       img.src = icon; img.alt = tipo; img.className = "icone-tarefa";
+      if (info.event.extendedProps?.origem === 'prev') {
+        img.style.outline = '2px dashed #9ca3af';
+        img.style.borderRadius = '6px';
+      }
       const wrap = document.createElement("div"); wrap.appendChild(img); return wrap;
     })() ] };
   };

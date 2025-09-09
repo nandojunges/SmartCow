@@ -158,6 +158,15 @@ export default function useBuscadeCalendario() {
       it?.origem_protocolo ||
       it?.resultado ||
       tipo;
+    const origemPrev = [
+      "PREV_DG30",
+      "PREV_DG60",
+      "PRE_PARTO_INICIO",
+      "PARTO_PREVISTO",
+      "SECAGEM_PREVISTA",
+    ].includes(rawTipo)
+      ? "prev"
+      : it?.origem || null;
     return {
       id: it.id || `${tipo}-${start}-${title || ""}`,
       start,
@@ -165,6 +174,7 @@ export default function useBuscadeCalendario() {
       allDay: it.allDay !== false,
       tipo,
       title,
+      origem: origemPrev,
       prioridadeVisual: it.prioridadeVisual !== false,
       animalId: it.animalId ?? it.animal_id ?? null,
       protocoloId: it.protocoloId ?? it.protocolo_id ?? null,
