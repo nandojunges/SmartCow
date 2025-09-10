@@ -861,8 +861,16 @@ router.post('/diagnostico', async (req, res) => {
 
   const { janela, metodo, observacao } = ev.detalhes || {};
   if (!janela) return res.status(400).json({ error:'ValidationError', message:'janela obrigatória' });
-  if (['DG30','DG60'].includes(janela) && !_dgJanelaValida({ iaData: iaRef.data, janela, dgData: dxISO })) {
-    return res.status(422).json({ error:'WindowError', message:'DG fora da janela (DG30=28-40; DG60=56-70)' });
+  if (['DG30','DG60'].includes(janela)) {
+    const regra = RULES[janela] || {};
+    const diff = _diasEntre(iaRef.data, dxISO);
+    if (diff < regra.min || diff > regra.max) {
+      const faixa = `${regra.min}-${regra.max}`;
+      return res.status(422).json({
+        error: 'WindowError',
+        message: `${janela} fora da janela (${faixa} dias após IA, encontrado ${diff})`
+      });
+    }
   }
 
   const detalhes = { janela, ia_ref_data: iaRef.data, ia_ref_id: iaRef.id || null };
