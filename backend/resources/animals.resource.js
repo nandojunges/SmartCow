@@ -159,12 +159,12 @@ const cfg = {
 
 const router = express.Router();
 
-// Rotas legadas desativadas: reprodução deve ser registrada em /reproducao
-router.post('/secagem', (_req, res) => {
-  return res.status(410).json({ ok: false, message: 'Use POST /api/v1/reproducao/secagem' });
+// Bloquear rotas antigas de eventos reprodutivos (se existirem)
+router.post('/secagem', (req, res) => {
+  return res.status(410).json({ error:'Gone', message:'Use /api/v1/reproducao/secagem' });
 });
-router.post('/parto', (_req, res) => {
-  return res.status(410).json({ ok: false, message: 'Use POST /api/v1/reproducao/parto' });
+router.post('/parto', (req, res) => {
+  return res.status(410).json({ error:'Gone', message:'Use /api/v1/reproducao/parto' });
 });
 
 /* =========== Sanitização + mapeamento inteligente de LOTE =========== */
