@@ -217,6 +217,22 @@ async function lastIaBefore(client, animalId, dateISO, ownerId){
   return rows[0] || null;
 }
 
+// verifica se existe diagnóstico positivo entre duas datas
+async function hasDgPosBetween(client, animalId, startISO, endISO, ownerId){
+  if (!EVT_ANIM_COL || !EVT_TIPO || !EVT_DATA) return false;
+  const where=[`"${EVT_ANIM_COL}"=$1`,`"${EVT_TIPO}"='DIAGNOSTICO'`,`"${EVT_DATA}" > $2`,`"${EVT_DATA}" < $3`];
+  const params=[animalId,startISO,endISO];
+  if (EVT_RESULT){
+    where.push(`"${EVT_RESULT}"='prenhe'`);
+  } else if (EVT_DETALHES){
+    where.push(`COALESCE("${EVT_DETALHES}"->>'resultado','')='prenhe'`);
+  }
+  if (HAS_OWNER_EVT && ownerId){ where.push(`owner_id=$${params.length+1}`); params.push(ownerId); }
+  const sql=`SELECT 1 FROM "${T_EVT}" WHERE ${where.join(' AND ')} LIMIT 1`;
+  const { rows } = await (client||db).query(sql, params);
+  return rows.length>0;
+}
+
 async function getAnimalRow(animalId, ownerId) {
   if (!ANIM_ID_COL) return null;
   const fields = [
@@ -741,10 +757,10 @@ router.get('/eventos/animal/:id', async (req, res) => {
     if (gap >= 18 && gap <= 25){
       // houve DG+ entre a e b?
       const temDGPos = out.some(ev => ev[EVT_TIPO]==='DIAGNOSTICO'
-        && ev[EVT_RESULT]==='positivo'
+        && (ev[EVT_RESULT]==='prenhe' || ev._detalhes?.resultado==='prenhe')
         && ev[EVT_DATA] >= a[EVT_DATA] && ev[EVT_DATA] <= b[EVT_DATA]);
       if (!temDGPos){
-        a._detalhes = { ...(a._detalhes||{}), retorno_cio:true, ia_negativa_por_retorno:true };
+        a._detalhes = { ...(a._detalhes||{}), retorno_cio:true, ia_negativa_por_retorno:true, resultado:'negativo' };
       }
     }
   }
@@ -773,6 +789,8 @@ router.post('/ia', async (req, res) => {
   try {
     client = await db.connect();
     await client.query('BEGIN');
+    const dataISO = toISODateString(ev.data);
+    const iaAnterior = await lastIaBefore(client, ev.animal_id, dataISO, uid);
 
     if (touroId) {
       await consumirDoseTouroTx({ client, touroId, ownerId: uid });
@@ -780,7 +798,7 @@ router.post('/ia', async (req, res) => {
 
     const cols = [], vals = [], params = [];
     if (EVT_ANIM_COL) { cols.push(`"${EVT_ANIM_COL}"`); params.push(ev.animal_id); vals.push(`$${params.length}`); }
-    if (EVT_DATA)     { cols.push(`"${EVT_DATA}"`);     params.push(toISODateString(ev.data)); vals.push(`$${params.length}`); }
+    if (EVT_DATA)     { cols.push(`"${EVT_DATA}"`);     params.push(dataISO); vals.push(`$${params.length}`); }
     if (EVT_TIPO)     { cols.push(`"${EVT_TIPO}"`);     params.push('IA'); vals.push(`$${params.length}`); }
     if (EVT_DETALHES) { cols.push(`"${EVT_DETALHES}"`); params.push(JSON.stringify(ev.detalhes || {})); vals.push(`$${params.length}::jsonb`); }
     if (EVT_PROTO_ID && ev.protocolo_id) { cols.push(`"${EVT_PROTO_ID}"`); params.push(ev.protocolo_id); vals.push(`$${params.length}`); }
@@ -795,10 +813,23 @@ router.post('/ia', async (req, res) => {
     await atualizarAnimalCampos({
       animalId: ev.animal_id,
       ownerId: uid,
-      ultimaIA: toISODateString(ev.data),
+      ultimaIA: dataISO,
       situacaoReprodutiva: ANIM_SIT_REP ? 'inseminada' : null,
       client,
     });
+
+    // retorno de cio: IA subsequente 18-25 dias após IA anterior sem DG+
+    if (iaAnterior) {
+      const diff = _diasEntre(iaAnterior.data, dataISO);
+      if (diff >= 18 && diff <= 25) {
+        const dgPos = await hasDgPosBetween(client, ev.animal_id, iaAnterior.data, dataISO, uid);
+        if (!dgPos && EVT_ID && EVT_DETALHES) {
+          let set = `"${EVT_DETALHES}" = COALESCE("${EVT_DETALHES}",'{}'::jsonb) || '{"resultado":"negativo"}'::jsonb`;
+          if (EVT_RESULT) set += `, "${EVT_RESULT}"='vazia'`;
+          await client.query(`UPDATE "${T_EVT}" SET ${set} WHERE "${EVT_ID}"=$1`, [iaAnterior.id]);
+        }
+      }
+    }
 
     await client.query('COMMIT');
     emitir('protocolosAtivosAtualizados');
@@ -828,12 +859,15 @@ router.post('/diagnostico', async (req, res) => {
   const iaRef = await lastIaBefore(null, ev.animal_id, dxISO, uid);
   if (!iaRef) return res.status(422).json({ error:'Sem IA anterior para parear.' });
 
-  const janela = ev.detalhes?.janela;
-  if (janela && !_dgJanelaValida({ iaData: iaRef.data, janela, dgData: dxISO })) {
-    return res.status(422).json({ error:`DG fora da janela para ${janela}.` });
+  const { janela, metodo, observacao } = ev.detalhes || {};
+  if (!janela) return res.status(400).json({ error:'ValidationError', message:'janela obrigatória' });
+  if (['DG30','DG60'].includes(janela) && !_dgJanelaValida({ iaData: iaRef.data, janela, dgData: dxISO })) {
+    return res.status(422).json({ error:'WindowError', message:'DG fora da janela (DG30=28-40; DG60=56-70)' });
   }
 
-  const detalhes = { ...(ev.detalhes||{}), ia_ref_data: iaRef.data, ia_ref_id: iaRef.id || null };
+  const detalhes = { janela, ia_ref_data: iaRef.data, ia_ref_id: iaRef.id || null };
+  if (metodo) detalhes.metodo = metodo;
+  if (observacao) detalhes.observacao = observacao;
 
   const cols = [], vals = [], params = [];
   if (EVT_ANIM_COL) { cols.push(`"${EVT_ANIM_COL}"`); params.push(ev.animal_id); vals.push(`$${params.length}`); }
