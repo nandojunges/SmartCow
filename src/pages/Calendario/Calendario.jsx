@@ -47,6 +47,7 @@ export default function Calendario() {
       const img = document.createElement("img");
       img.src = icon; img.alt = tipo; img.className = "icone-tarefa";
       if (info.event.extendedProps?.origem === 'prev') {
+        // highlight events carried over from a previous schedule
         img.style.outline = '2px dashed #9ca3af';
         img.style.borderRadius = '6px';
       }
