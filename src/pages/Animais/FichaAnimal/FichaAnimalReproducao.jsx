@@ -303,20 +303,7 @@ export default function FichaAnimalReproducao({ animal }) {
     const id = await resolverAnimalId(animal);
     setAnimalId(id);
     if (!id) return;
-
-    // Fonte PRIMÁRIA da timeline: /reproducao/eventos/animal/:id
-    const data = await apiGet(`${API_REPRO}/eventos/animal/${encodeURIComponent(id)}`);
-    const items = Array.isArray(data?.items) ? data.items : [];
-    setEventos(processarEventosParaTimeline(items));
-    const norm = normalizeFromEventos(items);
-    setHistoricoRemoto({
-      inseminacoes: norm.inseminacoes,
-      partos: norm.partos,
-      secagens: norm.secagens,
-      diagnosticosGestacao: norm.diagnosticosGestacao,
-    });
-    setOcorrencias(norm.ocorrenciasAll);
-
+    await carregarTimeline(id);
     const anim = await apiGet(`${API_ANIM}/${encodeURIComponent(id)}`);
     setAnimalDeriv(anim);
 
@@ -332,6 +319,21 @@ export default function FichaAnimalReproducao({ animal }) {
     window.addEventListener("registroReprodutivoAtualizado", h);
     return () => window.removeEventListener("registroReprodutivoAtualizado", h);
   }, [animal?.id, animal?.numero]);
+
+  async function carregarTimeline(id = animalId) {
+    if (!id) return;
+    const data = await apiGet(`${API_REPRO}/eventos/animal/${encodeURIComponent(id)}`);
+    const items = Array.isArray(data?.items) ? data.items : [];
+    setEventos(processarEventosParaTimeline(items));
+    const norm = normalizeFromEventos(items);
+    setHistoricoRemoto({
+      inseminacoes: norm.inseminacoes,
+      partos: norm.partos,
+      secagens: norm.secagens,
+      diagnosticosGestacao: norm.diagnosticosGestacao,
+    });
+    setOcorrencias(norm.ocorrenciasAll);
+  }
 
   async function carregarCalendario(id = animalId) {
     if (!id) return;
@@ -353,20 +355,26 @@ export default function FichaAnimalReproducao({ animal }) {
     };
   }, [range.start, range.end, animalId]);
 
+  async function afterMutacao(id) {
+    const target = id || animalId;
+    await carregarCalendario(target);
+    await carregarTimeline(target);
+  }
+
+  const TYPE_META = {
+    PROTOCOLO_ETAPA: { cor:'#7c3aed', ic:'🧪', rot:'Etapa de Protocolo' },
+    TRATAMENTO:      { cor:'#f59e0b', ic:'💊', rot:'Dose de Tratamento' },
+    PREV_DG30:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG30' },
+    PREV_DG60:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG60' },
+    PRE_PARTO_INICIO:{ cor:'#22c55e', ic:'🌿', rot:'Início Pré-Parto' },
+    PARTO_PREVISTO:  { cor:'#22c55e', ic:'👶', rot:'Parto Previsto' },
+    SECAGEM:         { cor:'#7e22ce', ic:'🟣', rot:'Secagem' },
+    SECAGEM_PREVISTA:{ cor:'#a78bfa', ic:'🟣', rot:'Secagem Prevista' },
+  };
   function normalizarTarefasCalendario(itens) {
     return (itens || []).map(raw => {
       const tipo = raw.tipo;
-      const map = {
-        PROTOCOLO_ETAPA: { cor:'#7c3aed', ic:'🧪', rot:'Etapa de Protocolo' },
-        TRATAMENTO:      { cor:'#f59e0b', ic:'💊', rot:'Dose de Tratamento' },
-        PREV_DG30:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG30' },
-        PREV_DG60:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG60' },
-        PRE_PARTO_INICIO:{ cor:'#22c55e', ic:'🌿', rot:'Início Pré-Parto' },
-        PARTO_PREVISTO:  { cor:'#22c55e', ic:'👶', rot:'Parto Previsto' },
-        SECAGEM:         { cor:'#7e22ce', ic:'🟣', rot:'Secagem' },
-        SECAGEM_PREVISTA:{ cor:'#a78bfa', ic:'🟣', rot:'Secagem Prevista' },
-      };
-      let meta = map[tipo] || { cor:'#64748b', ic:'📌', rot:tipo };
+      const meta = TYPE_META[tipo] || { cor:'#64748b', ic:'📌', rot:tipo };
       const tip = {
         data: raw.data,
         tipo,
@@ -393,18 +401,18 @@ export default function FichaAnimalReproducao({ animal }) {
       } else {
         return;
       }
-      await carregarCalendario();
+      await afterMutacao(t.animal_id);
     } catch (e) {
       console.error(e);
     }
   }
 
-  async function registrarIA(payload){ const r=await apiPost(`${API_REPRO}/ia`, payload); await carregarCalendario(); return r; }
-  async function registrarDG(payload){ const r=await apiPost(`${API_REPRO}/diagnostico`, payload); await carregarCalendario(); return r; }
-  async function aplicarProtocolo(payload){ const r=await apiPost(`${API_REPRO}/aplicar-protocolo`, payload); await carregarCalendario(); return r; }
-  async function iniciarTratamento(payload){ const r=await apiPost(`${API_REPRO}/tratamento`, payload); await carregarCalendario(); return r; }
-  async function registrarSecagem(payload){ const r=await apiPost(`${API_REPRO}/secagem`, payload); await carregarCalendario(); return r; }
-  async function registrarParto(payload){ const r=await apiPost(`${API_REPRO}/parto`, payload); await carregarCalendario(); return r; }
+  async function registrarIA(payload){ const r=await apiPost(`${API_REPRO}/ia`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function registrarDG(payload){ const r=await apiPost(`${API_REPRO}/diagnostico`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function aplicarProtocolo(payload){ const r=await apiPost(`${API_REPRO}/aplicar-protocolo`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function iniciarTratamento(payload){ const r=await apiPost(`${API_REPRO}/tratamento`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function registrarSecagem(payload){ const r=await apiPost(`${API_REPRO}/secagem`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function registrarParto(payload){ const r=await apiPost(`${API_REPRO}/parto`, payload); await afterMutacao(payload?.animal_id); return r; }
 
   // ---- usa historico remoto (do backend) se disponível; senão o do prop:
   const histMerged = useMemo(() => {
@@ -539,7 +547,7 @@ export default function FichaAnimalReproducao({ animal }) {
   /* ===== Ações backend ===== */
   async function excluirEventoById(id) {
     await apiDelete(`${API_REPRO}/eventos/${encodeURIComponent(id)}`);
-    await carregarCalendario();
+    await afterMutacao();
   }
   async function cancelarAplicacao(aplicacaoId) {
     await apiDelete(`${API_REPRO}/aplicacao/${encodeURIComponent(aplicacaoId)}`);
@@ -548,7 +556,7 @@ export default function FichaAnimalReproducao({ animal }) {
     window.dispatchEvent(new Event("registroReprodutivoAtualizado"));
     window.dispatchEvent(new Event("atualizarCalendario"));
     window.dispatchEvent(new Event("tarefasAtualizadas"));
-    await carregarCalendario();
+    await afterMutacao();
   }
 
   function normalizaTipo(t) {

@@ -995,9 +995,12 @@ router.post('/parto', async (req, res) => {
     await atualizarAnimalCampos({
       animalId: ev.animal_id,
       ownerId: uid,
-      situacaoReprodutiva: ANIM_SIT_REP ? 'pos-parto' : null,
+      situacaoReprodutiva: ANIM_SIT_REP ? 'puerpera' : null,
       previsaoPartoISO: null,
     });
+    emitir('registroReprodutivoAtualizado');
+    emitir('atualizarCalendario');
+    emitir('tarefasAtualizadas');
     res.json({ id: item.id, data: item.data, tipo: 'PARTO' });
   } catch (e) {
     res.status(400).json({ error: 'InternalError', detail: e?.message || 'Falha ao registrar parto' });
@@ -1026,6 +1029,9 @@ router.post('/secagem', async (req, res) => {
     });
 
     await atualizarAnimalCampos({ animalId: ev.animal_id, ownerId: uid, situacaoProdutiva: 'seca' }).catch(()=>{});
+    emitir('registroReprodutivoAtualizado');
+    emitir('atualizarCalendario');
+    emitir('tarefasAtualizadas');
     res.json({ id: item.id, data: item.data, tipo: 'SECAGEM' });
   } catch (e) {
     res.status(400).json({ error:'InternalError', detail: e?.message || 'Falha ao registrar secagem' });
