@@ -47,6 +47,20 @@ function toISODate(d) {
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
+function ensureHistoricoObject(current) {
+  if (current && typeof current === 'object') return current;
+  const parsed = safeJSON(current);
+  return parsed && typeof parsed === 'object' ? parsed : {};
+}
+
+function pushIntoHistoricoMeta(historico, kv) {
+  const h = ensureHistoricoObject(historico);
+  const meta = (h.meta && typeof h.meta === 'object') ? h.meta : {};
+  Object.assign(meta, kv);
+  h.meta = meta;
+  return h;
+}
+
 /* ========== introspecção de colunas ========== */
 const TABLE = 'animals';
 let COLS = new Set();
@@ -252,6 +266,31 @@ router.use((req, res, next) => {
     // se existirem, normaliza o valor
     if (clean.valor_compra != null) clean.valor_compra = parseCurrencyBRL(clean.valor_compra);
   }
+
+  // 5.1) Fallback: allowed keys sem coluna -> historico.meta
+  const maybeDateKeys = new Set([
+    'nascimento','ultima_ia','parto','ultimo_parto','previsao_parto','previsao_parto_iso'
+  ]);
+  let histMeta = clean.historico;
+  const metaToPush = {};
+  for (const [k, v] of Object.entries(clean)) {
+    if (k === 'historico') continue;
+    if (!hasCol(k) && ALLOWED_KEYS.has(k)) {
+      metaToPush[k] = v;
+      if (maybeDateKeys.has(k) && typeof v === 'string') {
+        const iso = toISODate(v);
+        if (iso) {
+          const isoKey = k.endsWith('_iso') ? k : (k + 'ISO');
+          metaToPush[isoKey] = iso;
+        }
+      }
+      delete clean[k];
+    }
+  }
+  if (Object.keys(metaToPush).length) {
+    histMeta = pushIntoHistoricoMeta(histMeta, metaToPush);
+  }
+  if (histMeta) clean.historico = histMeta;
 
   // 6) mantém apenas colunas válidas (historico é livre)
   const finalClean = {};
