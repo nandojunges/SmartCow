@@ -4,9 +4,13 @@ import db from '../dbx.js';
 import { z } from '../validate.js';
 import { makeValidator } from '../validate.js';
 import { makeCrudRouter } from './crudRouter.js';
+import { EventEmitter } from 'node:events';
 
-// placeholder simple emitter (no-op)
-function emitir(){}
+// simple event bus used to notify other modules (best effort)
+export const emitter = new EventEmitter();
+const emitir = (event, payload) => {
+  try { emitter.emit(event, payload); } catch {}
+};
 
 /* ================= helpers ================= */
 function extractUserId(req) {
