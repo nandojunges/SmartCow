@@ -307,6 +307,28 @@ async function atualizarAnimalCampos({
   if (!ANIM_ID_COL) return;
   const runner = client || db;
 
+  if (!ANIM_PREV_PARTO && previsaoPartoISO !== undefined && ANIM_COLS.has('historico')) {
+    const sel = await runner.query(
+      `SELECT historico FROM "${T_ANIM}" WHERE "${ANIM_ID_COL}" = $1 ${HAS_OWNER_ANIM && ownerId ? 'AND owner_id=$2' : ''} LIMIT 1`,
+      HAS_OWNER_ANIM && ownerId ? [animalId, ownerId] : [animalId]
+    );
+    const current = sel.rows[0]?.historico;
+    let hist = {};
+    if (current && typeof current === 'object') hist = current;
+    else if (typeof current === 'string') { try { hist = JSON.parse(current); } catch { hist = {}; } }
+    const dt = previsaoPartoISO ? new Date(previsaoPartoISO) : null;
+    const dd = dt ? String(dt.getDate()).padStart(2, '0') : null;
+    const mm = dt ? String(dt.getMonth() + 1).padStart(2, '0') : null;
+    const yyyy = dt ? dt.getFullYear() : null;
+    const br = (dt && dd && mm && yyyy) ? `${dd}/${mm}/${yyyy}` : null;
+    hist.previsoes = hist.previsoes || {};
+    hist.previsoes.parto = previsaoPartoISO ? { iso: previsaoPartoISO, br } : null;
+    await runner.query(
+      `UPDATE "${T_ANIM}" SET historico = $1 ${HAS_UPD_ANIM ? ', "updated_at"=NOW()' : ''} WHERE "${ANIM_ID_COL}"=$2 ${HAS_OWNER_ANIM && ownerId ? 'AND owner_id=$3' : ''}`,
+      HAS_OWNER_ANIM && ownerId ? [JSON.stringify(hist), animalId, ownerId] : [JSON.stringify(hist), animalId]
+    );
+  }
+
   const sets = [];
   const params = [];
 
@@ -493,16 +515,88 @@ async function getNextNumeroTx(client, ownerId) {
 async function createAnimalTx({ client, ownerId, data }) {
   // data: { numero?, brinco?, nascimentoISO?, sexo?, categoria?, raca?, maeRef? }
   const cols = [], vals = [], params = [];
-  if (ANIM_NUM && data.numero !== undefined)     { cols.push(`"${ANIM_NUM}"`);   params.push(data.numero);         vals.push(`$${params.length}`); }
-  if (ANIM_BRINC)                                { cols.push(`"${ANIM_BRINC}"`); params.push(data.brinco ?? null);  vals.push(`$${params.length}`); }
-  if (ANIM_NASC && data.nascimentoISO)           { cols.push(`"${ANIM_NASC}"`);  params.push(data.nascimentoISO);  vals.push(`$${params.length}`); }
-  if (ANIM_SEXO && data.sexo)                    { cols.push(`"${ANIM_SEXO}"`);  params.push(data.sexo);           vals.push(`$${params.length}`); }
-  if (ANIM_CATEG && data.categoria)              { cols.push(`"${ANIM_CATEG}"`); params.push(data.categoria);      vals.push(`$${params.length}`); }
-  if (ANIM_RACA && data.raca)                    { cols.push(`"${ANIM_RACA}"`);  params.push(data.raca);           vals.push(`$${params.length}`); }
-  if (ANIM_MAE_COL && data.maeRef !== undefined) { cols.push(`"${ANIM_MAE_COL}"`); params.push(data.maeRef);       vals.push(`$${params.length}`); }
-  if (HAS_OWNER_ANIM && ownerId)                 { cols.push('owner_id');         params.push(ownerId);             vals.push(`$${params.length}`); }
-  if (HAS_CREATED_ANIM)                          { cols.push('created_at');       vals.push('NOW()'); }
-  if (HAS_UPD_ANIM)                              { cols.push('updated_at');       vals.push('NOW()'); }
+  const hist = {};
+  const meta = {};
+
+  if (ANIM_NUM && data.numero !== undefined) {
+    cols.push(`"${ANIM_NUM}"`);
+    params.push(data.numero);
+    vals.push(`$${params.length}`);
+  } else if (!ANIM_NUM && data.numero != null) {
+    meta.numero = data.numero;
+  }
+
+  if (ANIM_BRINC) {
+    cols.push(`"${ANIM_BRINC}"`);
+    params.push(data.brinco ?? null);
+    vals.push(`$${params.length}`);
+  } else if (data.brinco != null) {
+    meta.brinco = data.brinco;
+  }
+
+  if (ANIM_NASC && data.nascimentoISO) {
+    cols.push(`"${ANIM_NASC}"`);
+    params.push(data.nascimentoISO);
+    vals.push(`$${params.length}`);
+  } else if (!ANIM_NASC && data.nascimentoISO) {
+    const dt = new Date(data.nascimentoISO);
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const yyyy = dt.getFullYear();
+    meta.nascimento = `${dd}/${mm}/${yyyy}`;
+    meta.nascimentoISO = data.nascimentoISO;
+  }
+
+  if (ANIM_SEXO && data.sexo) {
+    cols.push(`"${ANIM_SEXO}"`);
+    params.push(data.sexo);
+    vals.push(`$${params.length}`);
+  } else if (!ANIM_SEXO && data.sexo) {
+    meta.sexo = data.sexo;
+  }
+
+  if (ANIM_CATEG && data.categoria) {
+    cols.push(`"${ANIM_CATEG}"`);
+    params.push(data.categoria);
+    vals.push(`$${params.length}`);
+  } else if (!ANIM_CATEG && data.categoria) {
+    meta.categoria = data.categoria;
+  }
+
+  if (ANIM_RACA && data.raca) {
+    cols.push(`"${ANIM_RACA}"`);
+    params.push(data.raca);
+    vals.push(`$${params.length}`);
+  } else if (!ANIM_RACA && data.raca) {
+    meta.raca = data.raca;
+  }
+
+  if (ANIM_MAE_COL && data.maeRef !== undefined) {
+    cols.push(`"${ANIM_MAE_COL}"`);
+    params.push(data.maeRef);
+    vals.push(`$${params.length}`);
+  } else if (!ANIM_MAE_COL && data.maeRef !== undefined) {
+    meta.maeRef = data.maeRef;
+  }
+
+  if (Object.keys(meta).length) {
+    hist.meta = meta;
+    hist.origem = { tipo: 'nascimento', via: 'parto', at: new Date().toISOString() };
+  }
+
+  if (Object.keys(hist).length && ANIM_COLS.has('historico')) {
+    cols.push('"historico"');
+    params.push(JSON.stringify(hist));
+    vals.push(`$${params.length}::jsonb`);
+  }
+
+  if (HAS_OWNER_ANIM && ownerId) {
+    cols.push('owner_id');
+    params.push(ownerId);
+    vals.push(`$${params.length}`);
+  }
+  if (HAS_CREATED_ANIM) { cols.push('created_at'); vals.push('NOW()'); }
+  if (HAS_UPD_ANIM) { cols.push('updated_at'); vals.push('NOW()'); }
 
   const returning = [
     ANIM_ID_COL && `"${ANIM_ID_COL}" AS id`,
