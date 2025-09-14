@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "ts": "2025-09-12T01:00:36.427Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/decisao",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "4cef0289-c730-406c-baa0-57db6503e2e1",
+    "decisao": "IATF"
+  },
+  "response": {
+    "ok": true
+  }
+}

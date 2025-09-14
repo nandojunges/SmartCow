@@ -15,6 +15,7 @@ import SubAbasAnimais from './SubAbasAnimais';
 import SaidaAnimal from './SaidaAnimal';
 import Inativas from './Inativas';
 import CadastroAnimal from './CadastroAnimal';
+import FichaAnimal from './FichaAnimal/FichaAnimal'; // << adicionada
 import { getAnimais } from '../../api';
 
 /* ---------------------------
@@ -32,7 +33,6 @@ const estilos = {
   fonte: 'Poppins, sans-serif',
 };
 
-// Ícones
 const icones = {
   todos: <ListChecks />,
   entrada: <PlusCircle />,
@@ -125,6 +125,10 @@ export default function Animais() {
   const [animais, setAnimais] = useState([]);
   const [expandido, setExpandido] = useState(false);
 
+  // estado/modal da ficha
+  const [fichaOpen, setFichaOpen] = useState(false);
+  const [animalFicha, setAnimalFicha] = useState(null);
+
   const carregar = async () => {
     try {
       const { items } = await getAnimais();
@@ -134,39 +138,59 @@ export default function Animais() {
     }
   };
 
-  // Carrega ao montar
-  useEffect(() => {
-    carregar();
-  }, []);
+  useEffect(() => { carregar(); }, []);
 
-  // Qualquer filho pode disparar window.dispatchEvent(new Event("animaisAtualizados"))
   useEffect(() => {
     const handler = () => carregar();
+    const abrirFicha = (e) => {
+      const animal = e?.detail?.animal;
+      if (animal) { setAnimalFicha(animal); setFichaOpen(true); }
+    };
     window.addEventListener('animaisAtualizados', handler);
     window.addEventListener('animais:refresh', handler);
+    window.addEventListener('abrirFichaAnimal', abrirFicha); // fallback vindo do Inativas
     return () => {
       window.removeEventListener('animaisAtualizados', handler);
       window.removeEventListener('animais:refresh', handler);
+      window.removeEventListener('abrirFichaAnimal', abrirFicha);
     };
   }, []);
+
+  // Callback padrão que o Inativas/Plantel podem chamar.
+  // Aceita nova lista OU recarrega do backend se nada for passado.
+  const handleAtualizar = (novaLista) => {
+    if (Array.isArray(novaLista)) {
+      setAnimais(novaLista);
+      window.dispatchEvent(new Event('animaisAtualizados'));
+    } else {
+      carregar();
+    }
+  };
+
+  const handleVerFicha = (animal) => {
+    setAnimalFicha(animal);
+    setFichaOpen(true);
+  };
 
   const renderizarPrincipal = () => {
     switch (abaAtiva) {
       case 'todos':
-        // SubAbasAnimais já mapeia: plantel → Plantel, secagem → Secagem (com botão "Secar"), preparto_parto → PrePartoParto
         return <SubAbasAnimais animais={animais} onRefresh={carregar} />;
 
       case 'entrada':
-        // Após cadastrar, recarrega do backend
         return <CadastroAnimal animais={animais} onAtualizar={carregar} />;
 
       case 'saida':
-        // Após registrar saída, recarrega (o animal some do plantel)
         return <SaidaAnimal animais={animais} onAtualizar={carregar} />;
 
       case 'inativas':
-        // Após reativar/excluir/editar, recarrega
-        return <Inativas animais={animais} onAtualizar={carregar} />;
+        return (
+          <Inativas
+            animais={animais}
+            onAtualizar={handleAtualizar}
+            onVerFicha={handleVerFicha}
+          />
+        );
 
       case 'relatorio':
         return <div className="p-4">Relatórios — Em breve…</div>;
@@ -182,7 +206,6 @@ export default function Animais() {
     }
   };
 
-  // dimensões/cores
   const larguraFechada = 60;
   const larguraAberta = 140;
   const ALTURA_TOPO = 150;
@@ -202,9 +225,6 @@ export default function Animais() {
           backgroundColor: COR_BARRA,
           color: '#fff',
           boxShadow: 'none',
-          paddingLeft: 0,
-          marginLeft: 0,
-          borderLeft: 'none',
         }}
       >
         <ModalLateralAnimais
@@ -227,6 +247,14 @@ export default function Animais() {
       >
         {renderizarPrincipal()}
       </div>
+
+      {/* Modal da ficha (reutilizado por qualquer aba) */}
+      {fichaOpen && animalFicha && (
+        <FichaAnimal
+          animal={animalFicha}
+          onClose={() => { setFichaOpen(false); setAnimalFicha(null); }}
+        />
+      )}
     </div>
   );
 }

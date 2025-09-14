@@ -1,0 +1,194 @@
+{
+  "meta": {
+    "ts": "2025-09-11T18:44:47.696Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/decisoes/ultimas",
+    "userId": "1"
+  },
+  "request": {
+    "ids": [
+      "103a9bb9-04b3-44fe-abfe-6db33b5152ea",
+      "85905ea4-e733-4a9b-90f1-10ba6b8bfdaf",
+      "6f0479c3-e9b2-43d4-9824-0eb125636e0e",
+      "ffc5fe26-67fd-4951-94d3-69012ca5f8b8",
+      "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+      "9923e45a-e62f-4021-b0c7-03862dd0f843",
+      "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+      "011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+      "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b"
+    ]
+  },
+  "response": {
+    "items": [
+      {
+        "id": "95d86a9b-5563-417b-a288-8d5f4c898601",
+        "animal_id": "ffc5fe26-67fd-4951-94d3-69012ca5f8b8",
+        "data": "2025-09-10T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "Infusão"
+        },
+        "resultado": null,
+        "created_at": "2025-09-10T00:53:22.663Z",
+        "updated_at": "2025-09-10T00:53:22.663Z",
+        "numero": "6",
+        "brinco": "6"
+      },
+      {
+        "id": "a229a339-60ea-4f2e-989e-3cee8307efc7",
+        "animal_id": "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "__CLEAR__"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T12:05:44.537Z",
+        "updated_at": "2025-09-07T12:05:44.537Z",
+        "numero": "3",
+        "brinco": "3"
+      },
+      {
+        "id": "bee4deb6-c251-450b-89eb-317bd0edb090",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "__CLEAR__"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T12:05:43.940Z",
+        "updated_at": "2025-09-07T12:05:43.940Z",
+        "numero": "4",
+        "brinco": "4"
+      },
+      {
+        "id": "12059fb9-7085-4d6e-b126-faf274de3697",
+        "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "__CLEAR__"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T12:05:43.099Z",
+        "updated_at": "2025-09-07T12:05:43.099Z",
+        "numero": "5",
+        "brinco": "5"
+      },
+      {
+        "id": "36e904d3-fa3c-4140-b729-5861ce7f1b4c",
+        "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "Infusão"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T11:43:05.766Z",
+        "updated_at": "2025-09-07T11:43:05.766Z",
+        "numero": "5",
+        "brinco": "5"
+      },
+      {
+        "id": "777d9d43-a827-46a6-b5fd-be0b719b0a68",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "Infusão"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T11:37:55.576Z",
+        "updated_at": "2025-09-07T11:37:55.576Z",
+        "numero": "4",
+        "brinco": "4"
+      },
+      {
+        "id": "d86cefcb-cf6b-4586-9def-568e44eeacfc",
+        "animal_id": "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "IATF"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T11:37:48.366Z",
+        "updated_at": "2025-09-07T11:37:48.366Z",
+        "numero": "3",
+        "brinco": "3"
+      },
+      {
+        "id": "d03a7da6-b817-4487-aa94-6f1df441c719",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "IATF"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T11:36:47.997Z",
+        "updated_at": "2025-09-07T11:36:47.997Z",
+        "numero": "4",
+        "brinco": "4"
+      },
+      {
+        "id": "b2ad9e84-d872-404e-9130-d8e73641104f",
+        "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "IATF"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T10:28:02.048Z",
+        "updated_at": "2025-09-07T10:28:02.048Z",
+        "numero": "5",
+        "brinco": "5"
+      },
+      {
+        "id": "632bf488-cba8-4ab0-944d-35dfa7e63532",
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "data": "2025-09-07T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "IATF"
+        },
+        "resultado": null,
+        "created_at": "2025-09-07T02:11:53.432Z",
+        "updated_at": "2025-09-07T02:11:53.432Z",
+        "numero": "4",
+        "brinco": "4"
+      },
+      {
+        "id": "9c5edb78-1a6d-4b32-b27e-23ea00dd4e85",
+        "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+        "data": "2025-09-06T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "IATF"
+        },
+        "resultado": null,
+        "created_at": "2025-09-06T22:13:43.052Z",
+        "updated_at": "2025-09-06T22:13:43.052Z",
+        "numero": "1",
+        "brinco": "1"
+      },
+      {
+        "id": "20f19423-4bde-40f5-962e-091952457246",
+        "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+        "data": "2025-09-06T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "Infusão"
+        },
+        "resultado": null,
+        "created_at": "2025-09-06T14:52:08.628Z",
+        "updated_at": "2025-09-06T14:52:08.628Z",
+        "numero": "1",
+        "brinco": "1"
+      },
+      {
+        "id": "df1a55ac-ef8a-4d3b-8a98-dd486107e06e",
+        "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+        "data": "2025-09-06T03:00:00.000Z",
+        "detalhes": {
+          "decisao": "IATF"
+        },
+        "resultado": null,
+        "created_at": "2025-09-06T14:15:26.001Z",
+        "updated_at": "2025-09-06T14:15:26.001Z",
+        "numero": "1",
+        "brinco": "1"
+      }
+    ]
+  }
+}

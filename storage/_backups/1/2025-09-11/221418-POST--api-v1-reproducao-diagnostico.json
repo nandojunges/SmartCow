@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "ts": "2025-09-12T01:14:18.733Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/diagnostico",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "6f0479c3-e9b2-43d4-9824-0eb125636e0e",
+    "data": "2025-09-11",
+    "tipo": "DIAGNOSTICO",
+    "resultado": "prenhe",
+    "detalhes": {
+      "tipoExame": "DG 30d",
+      "diasDesdeIA": 31,
+      "comentario": ""
+    }
+  },
+  "response": {
+    "error": "ValidationError",
+    "message": "janela obrigatória"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "ts": "2025-09-10T21:55:51.925Z",
+    "method": "POST",
+    "url": "/api/v1/animals/85905ea4-e733-4a9b-90f1-10ba6b8bfdaf/saida",
+    "userId": "1"
+  },
+  "request": {
+    "tipo_saida": "venda",
+    "motivo_saida": "Baixa produção",
+    "observacao_saida": "",
+    "data_saida": "01/01/2025"
+  },
+  "response": {
+    "error": "Falha ao registrar saída"
+  }
+}

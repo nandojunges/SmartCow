@@ -18,7 +18,7 @@ import animalsMetrics from "./resources/animals.metrics.js";
 import productsMetrics from "./resources/products.metrics.js";
 import calendarResource from "./resources/calendar.resource.js"; // 👈 mantém antes do catch-all
 import milkResource from "./resources/milk.resource.js";       // 👈 NOVO
-import consumoResource from "./resources/consumo_reposicao.resource.js"; // 👈 NOVO (Consumo & Reposição)
+import consumoResource from "./resources/consumo_reposicao.resource.js"; // 👈 Consumo & Reposição
 import reproducaoResource from "./resources/reproducao.resource.js"; // 👈 NOVO (Reprodução)
 // ⚠️ NÃO importar protocolo.resource.js aqui — ele é montado dentro de reproducao.resource.js
 
@@ -116,12 +116,95 @@ app.use("/api/v1/animals/metrics", animalsMetrics);
 app.use("/api/v1/products/metrics", productsMetrics);
 
 // recursos principais
+// --- Compat: aliases de Reposição/Lotes para o front antigo ---
+// /api/v1/reposicao/*  -> usa o mesmo router de consumo
+app.use("/api/v1/reposicao", consumoResource);
+// /api/v1/lots -> reescreve para /lotes no router de consumo
+app.use("/api/v1/lots", (req, res, next) => {
+  req.url = "/lotes" + (req.url || "");
+  return consumoResource(req, res, next);
+});
+
+// --- Compat: normalizador do payload de medição de leite ---
+// Algumas UIs mandam data em DD/MM/YYYY e números com vírgula; também podem
+// usar chaves diferentes (volume/litros, ccs/celulas_somaticas).
+function normalizeDateCompat(s) {
+  if (!s) return s;
+  const v = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;                // YYYY-MM-DD
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v);            // DD/MM/YYYY
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return v;
+}
+function toNumberCompat(x) {
+  if (x == null || x === "") return x;
+  const n = Number(String(x).replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : x;
+}
+app.post("/api/v1/animals/:id/leite", (req, _res, next) => {
+  try {
+    const b = req.body ?? {};
+    const nb = { ...b };
+    // id do animal vindo da rota
+    if (!nb.animal_id) nb.animal_id = req.params?.id;
+    // normaliza data
+    const hojeISO = new Date().toISOString().slice(0, 10);
+    nb.data = normalizeDateCompat(b.data || b.dt || b.dia || hojeISO);
+    // default de turno, se faltar
+    let turno = nb.turno ?? nb.ordenha ?? nb.turnoOrdenha ?? nb.milking;
+    if (turno == null || turno === "") turno = "manha";
+    // aceita 1/2/3, M/T/N, strings variadas
+    const t = String(turno).toLowerCase();
+    if (["1","m","manhã","manha","morning"].includes(t)) turno = "manha";
+    else if (["2","t","tarde","afternoon"].includes(t)) turno = "tarde";
+    else if (["3","n","noite","night"].includes(t)) turno = "noite";
+    nb.turno = turno;
+    // tipo padrão (alguns validadores exigem)
+    if (!nb.tipo) nb.tipo = "medicao";
+    // números comuns com vírgula/ponto
+    for (const k of [
+      "litros","volume","quantidade",
+      "gordura","proteina","lactose","ureia",
+      "ccs","solidos","sólidos","caseina","sng"
+    ]) {
+      if (k in nb) nb[k] = toNumberCompat(nb[k]);
+    }
+    // sinônimos
+    if (nb.litros == null) {
+      if (nb.volume != null) nb.litros = nb.volume;
+      else if (nb.quantidade != null) nb.litros = toNumberCompat(nb.quantidade);
+      else if (nb.producao != null) nb.litros = toNumberCompat(nb.producao);
+    }
+    if (nb.ccs == null && nb.celulas_somaticas != null) {
+      nb.ccs = toNumberCompat(nb.celulas_somaticas);
+    }
+    req.body = nb;
+  } catch {}
+  next();
+});
+
 app.use("/api/v1/animals", animalsResource);
 app.use("/api/v1/products", productsResource);
 app.use("/api/v1/calendar", calendarResource);
 app.use("/api/v1/milk", milkResource);
 app.use("/api/v1/consumo", consumoResource);
 app.use("/api/v1/reproducao", reproducaoResource);
+
+// ========================
+// Protocolo (orquestrador) — import dinâmico
+// ========================
+try {
+  const { default: protocoloOrquestrador } = await import("./resources/protocolo.resource.js");
+  if (protocoloOrquestrador) {
+    // pode compartilhar o mesmo prefixo de reprodução — são subrotas diferentes
+    app.use("/api/v1/reproducao", protocoloOrquestrador);
+    console.log("✅ Orquestrador de protocolo montado em /api/v1/reproducao");
+  } else {
+    console.warn("⚠️ protocolo.resource export default vazio; rota não montada.");
+  }
+} catch (err) {
+  console.warn("⚠️ Falha ao carregar protocolo.resource; orquestrador desativado temporariamente:", err?.message || err);
+}
 
 // ========================
 // Genética: import dinâmico

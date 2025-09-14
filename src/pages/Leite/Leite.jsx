@@ -140,25 +140,11 @@ function guessTipoLancamentoDoDia(vacas = [], date) {
   return "2";
 }
 
-async function apiListarLotes() {
-  const caminhos = ["/consumo/lotes", "/reposicao/lotes", "/lots", "/milk/lots"];
-  for (const url of caminhos) {
-    try {
-      const { data } = await api.get(url);
-      const arr = Array.isArray(data) ? data : [];
-      // aceita "lactação" com/sem acento
-      const lotes = arr.filter((l) => {
-        const f = String(l.funcao || "")
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase();
-        return !l.funcao || f === "lactacao";
-      });
-      if (lotes.length) return lotes;
-    } catch {}
-  }
-  return [];
-}
+// Lotes de reposição (rota correta no backend)
+const apiListarLotes = async () => {
+  const r = await api.get("/api/v1/consumo/lotes");
+  return r.data;
+};
 
 /* =================== TABELA (resumo do dia) =================== */
 function TabelaResumoDia({ vacas = [], medicoes = {}, dataAtual, onClickFicha, onClickRegistrar }) {
@@ -564,6 +550,27 @@ function ModalMedicaoLeite({ data, vacas = [], onFechar, onSalvar }) {
       return { ...prev, [numeroStr]: atualizado };
     });
   };
+  const toISO = (s) => {
+    if (!s) return s;
+    const v = String(s).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : v;
+  };
+  const num = (x) => {
+    if (x == null || x === "") return x;
+    const n = Number(String(x).replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : x;
+  };
+  const normTurno = (v) => {
+    if (v == null || v === "") return "manha";
+    const t = String(v).toLowerCase();
+    if (["1","m","manhã","manha","morning"].includes(t)) return "manha";
+    if (["2","t","tarde","afternoon"].includes(t)) return "tarde";
+    if (["3","n","noite","night"].includes(t)) return "noite";
+    if (["manha","manhã","tarde","noite"].includes(t)) return t.replace("ã","a");
+    return "manha";
+  };
 
   const salvar = async () => {
     // ✅ grava em /animals/:id/leite (merge por data no backend — não apaga CMT/CCS)
@@ -601,6 +608,31 @@ function ModalMedicaoLeite({ data, vacas = [], onFechar, onSalvar }) {
         acaoSugerida: dados.acaoSugerida,
         motivoSugestao: dados.motivoSugestao,
       };
+      
+      // compat: garantir formato aceito pelo backend
+      payload.animal_id = payload.animal_id || id;
+      if (payload.data) payload.data = toISO(payload.data);
+      payload.turno = normTurno(payload.turno ?? payload.ordenha ?? payload.turnoOrdenha ?? payload.milking);
+      if (!payload.data) payload.data = new Date().toISOString().slice(0,10);
+      if (!payload.tipo) payload.tipo = "medicao";
+      for (const k of [
+        "litros","volume","quantidade",
+        "gordura","proteina","lactose","ureia",
+        "ccs","solidos","sólidos","caseina","sng"
+      ]) {
+        if (k in payload) payload[k] = num(payload[k]);
+      }
+      if (payload.litros == null) {
+        if (payload.volume != null) payload.litros = payload.volume;
+        else if (payload.quantidade != null) payload.litros = num(payload.quantidade);
+        else if (payload.producao != null) payload.litros = num(payload.producao);
+      }
+      if (payload.ccs == null && payload.celulas_somaticas != null) {
+        payload.ccs = num(payload.celulas_somaticas);
+      }
+      if (payload.litros == null || Number(payload.litros) <= 0) {
+        throw new Error("Informe a quantidade de leite (litros) maior que zero.");
+      }
 
       try {
         await api.post(`/animals/${id}/leite`, payload);

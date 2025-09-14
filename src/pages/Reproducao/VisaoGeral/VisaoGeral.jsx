@@ -1,12 +1,13 @@
 // src/pages/Reproducao/VisaoGeral/VisaoGeral.jsx
 // -----------------------------------------------------------------------------
 // VisãoGeral conectado ao backend (com colunas novas e "Decisões")
+// + Correções Produtiva x Reprodutiva e sugestões coerentes com o estado
 // - IA/DG/Protocolo/Clínica salvando no backend
 // - Baixa de dose do touro tratada pelo backend (POST /reproducao/ia)
 // - Decisão: salva localmente (lista do técnico) + salva evento no backend
 // - Refresh da lista após IA/DG/Clínica/Protocolo para refletir dados do banco
 // - Ao carregar, busca últimas decisões no backend e pré-seleciona no select
-// - FIX: status "Inseminada" não some: inferimos pelo campo `ultima_ia` (BR/ISO)
+// - FIX: nunca usar "estado" (produtivo) como reprodutivo; fallback seguro = Vazia
 // - AÇÕES: botão "Registrar" abre o drawer (DG). Ações rápidas abrem drawers.
 // - OBS: conteúdo do drawer vem de arquivos separados:
 //        Inseminacao.jsx, Diagnostico.jsx, AplicarProtocolo.jsx, OcorrenciaClinica.jsx
@@ -96,6 +97,7 @@ const DEFAULT_SETTINGS = {
   idadeMinMeses: 12, vwpDias: 50,
   dg30janela: [28,35], dg60janela:[55,75],
   presyncNoFinalDoPEV: 7, permitirPresyncEmPEV:true,
+  prepartoDias: 21, // usado para produtiva "Pré-parto"
 };
 
 /* ================= UI helpers ================= */
@@ -128,33 +130,117 @@ function RegistrarButton({ onOpen }) {
   return <BtnChip onClick={onOpen}>Registrar</BtnChip>;
 }
 
+/* =================== CLASSIFICAÇÕES =================== */
+/** Produtiva: Lactante / Seca / Pré-parto / — */
+function classifyProd(row, settings){
+  // valor explícito do backend (aceita snake e camel já normalizados em getAnimaisFromAPI)
+  const raw = String(row.situacao_produtiva||"").toLowerCase();
+  if(raw.includes("seca"))     return { label:"Seca",      tone:"muted" };
+  if(raw.includes("lact"))     return { label:"Lactante",  tone:"ok" };
+  if(raw.includes("pré")||raw.includes("pre-")||raw.includes("preparto")||raw.includes("pré-parto")||raw.includes("pre-parto"))
+    return { label:"Pré-parto", tone:"info" };
+
+  // heurística por previsão de parto
+  const pp = calcPrevisaoParto(row);
+  if(pp){
+    const d=diffDays(pp,today());
+    if(d>=0 && d<=settings.prepartoDias) return { label:"Pré-parto", tone:"info" };
+    if(d>settings.prepartoDias && d<=60) return { label:"Seca",      tone:"muted" };
+    if(d>60)                              return { label:"Lactante",  tone:"ok" };
+  }
+
+  // se houver data de parto (DEL calculável), considera lactante
+  if (row.parto && parseBR(row.parto)) return { label:"Lactante", tone:"ok" };
+
+  return { label:"—", tone:"neutro" };
+}
+
+/** Reprodutiva: PEV / Pré-sincr. / IATF / Inseminada / Prenhe / Vazia */
+function classifyReprod(row, settings, normProd){
+  // nunca herdar produtivo como reprodutivo
+  let base = String(row.situacao_reprodutiva||"").toLowerCase();
+  const produtivos = ["lact", "seca", "pré-parto", "pre-parto", "preparto"];
+  if (produtivos.some(t => base.includes(t))) base = "";
+
+  // Prenhe explícito
+  if (base.includes("pren")) return { label:"Prenhe", tone:"ok" };
+
+  // Pré-parto ou Seca no produtivo => Prenhe (coerência)
+  if (normProd.label === "Pré-parto" || normProd.label === "Seca")
+    return { label:"Prenhe", tone:"ok" };
+
+  // Sinais explícitos de protocolos
+  if (base.includes("iatf")) return { label:"IATF", tone:"info" };
+  if (base.includes("pré") && base.includes("sincr")) return { label:"Pré-sincr.", tone:"info" };
+
+  // PEV (puerpério) — usa data de parto (DEL<VWP)
+  const partoDt=parseBR(row.parto);
+  if(partoDt){
+    const DEL=diffDays(today(),partoDt);
+    if(DEL < settings.vwpDias) return { label:"PEV", tone:"info" };
+  }
+
+  // IA recente → Inseminada (+ janelas de DG)
+  const iaDt = parseAnyDate(row.ultima_ia);
+  if(iaDt){
+    const d = diffDays(today(), iaDt);
+    if (d < settings.dg30janela[0])          return { label:"Inseminada",        tone:"info" };
+    if (d <= settings.dg30janela[1])         return { label:"Inseminada (DG30)", tone:"warn" };
+    if (d <  settings.dg60janela[0])         return { label:"Inseminada",        tone:"info" };
+    if (d <= settings.dg60janela[1])         return { label:"Inseminada (DG60)", tone:"warn" };
+    if (d <= settings.dg60janela[1] + 15)    return { label:"Inseminada",        tone:"info" };
+  }
+
+  // Vazia declarada
+  if (base.includes("vaz")) return { label:"Vazia", tone:"warn" };
+
+  // Default seguro
+  return { label:"Vazia", tone:"warn" };
+}
+
 /* ================= regra de sugestão ================= */
-function buildStep(animal, settings){
-  const { vwpDias,dg30janela,dg60janela,permitirPresyncEmPEV,presyncNoFinalDoPEV }=settings;
-  const partoDt=parseBR(animal.parto), iaDt=parseAnyDate(animal.ultima_ia), hoje=today();
-  const partoPrev=calcPrevisaoParto(animal);
-  const DEL=partoDt?diffDays(hoje,partoDt):null;
-  const emPEV=partoDt && DEL<vwpDias;
-  const inDG30=!!iaDt && diffDays(hoje,iaDt)>=dg30janela[0] && diffDays(hoje,iaDt)<=dg30janela[1];
-  const inDG60=!!iaDt && diffDays(hoje,iaDt)>=dg60janela[0] && diffDays(hoje,iaDt)<=dg60janela[1];
+function buildStep(row, settings, normRep){
+  const hoje=today();
+  const iaDt=parseAnyDate(row.ultima_ia);
 
-  if((animal.situacao_reprodutiva||"").toLowerCase().includes("prenhe"))
-    return { key:"NONE", label:"—", dueDate:null, detail:{ sitReprod:"Prenhe", partoPrev } };
+  // 1) Prenhe => nada
+  if(normRep.label==="Prenhe") return { key:"NONE", label:"—", dueDate:null, detail:{ sitReprod:"Prenhe" } };
 
-  if(inDG30) return { key:"DG30", label:"DG 30d", dueDate:addDays(iaDt,dg30janela[0]), detail:{ sitReprod:"IA 30d" } };
-  if(inDG60) return { key:"DG60", label:"DG 60d", dueDate:addDays(iaDt,dg60janela[0]), detail:{ sitReprod:"IA 60d" } };
-
-  if(emPEV){
-    const faltam=vwpDias-DEL;
-    if(permitirPresyncEmPEV && faltam<=presyncNoFinalDoPEV)
-      return { key:"PRESYNC", label:"Iniciar Pré-sincr.", dueDate:hoje, detail:{ sitReprod:"PEV" } };
+  // 2) Em PEV => sugestão de Pré-sincr. nos últimos dias do PEV
+  if(normRep.label==="PEV"){
+    const partoDt=parseBR(row.parto);
+    if(partoDt){
+      const DEL = diffDays(hoje, partoDt);
+      const faltam = settings.vwpDias - DEL;
+      if(settings.permitirPresyncEmPEV && faltam<=settings.presyncNoFinalDoPEV){
+        return { key:"PRESYNC", label:"Iniciar Pré-sincr.", dueDate:hoje, detail:{ sitReprod:"PEV" } };
+      }
+    }
     return { key:"NONE", label:"—", dueDate:null, detail:{ sitReprod:"PEV" } };
   }
 
-  if(!iaDt && (animal.situacao_reprodutiva==="Vazia"||animal.situacao_reprodutiva==="—"))
+  // 3) Pré-sincr. => próximo passo é IATF
+  if(normRep.label==="Pré-sincr.")
+    return { key:"IATF", label:"Iniciar IATF", dueDate:hoje, detail:{ sitReprod:"Pré-sincr." } };
+
+  // 4) IATF => registrar IA
+  if(normRep.label==="IATF")
+    return { key:"IA", label:"Registrar IA", dueDate:hoje, detail:{ sitReprod:"IATF" } };
+
+  // 5) Inseminada → DG
+  if(iaDt){
+    const d=diffDays(hoje, iaDt);
+    if(d>=settings.dg30janela[0] && d<=settings.dg30janela[1])
+      return { key:"DG30", label:`DG 30d`, dueDate:addDays(iaDt, settings.dg30janela[0]), detail:{ sitReprod:"IA 30d" } };
+    if(d>=settings.dg60janela[0] && d<=settings.dg60janela[1])
+      return { key:"DG60", label:`DG 60d`, dueDate:addDays(iaDt, settings.dg60janela[0]), detail:{ sitReprod:"IA 60d" } };
+  }
+
+  // 6) Vazia => IATF
+  if(normRep.label==="Vazia")
     return { key:"IATF", label:"Iniciar IATF", dueDate:hoje, detail:{ sitReprod:"Vazia" } };
 
-  return { key:"REVIEW", label:"Revisar dados", dueDate:null, detail:{ sitReprod:animal.situacao_reprodutiva||"—" } };
+  return { key:"REVIEW", label:"Revisar dados", dueDate:null, detail:{ sitReprod:normRep.label } };
 }
 
 /* ================= Overlays/Modais ================= */
@@ -324,7 +410,6 @@ function Kebab({ onPrint, onAjustes, onDecisoes }){
       {open && (
         <div
           onMouseDown={(e)=>e.stopPropagation()}
-          // ⬇️ Mantém acima do cabeçalho sticky (z-10)
           style={{position:"absolute",right:0,top:"110%",background:"#fff",border:"1px solid #e5e7eb",borderRadius:10,boxShadow:"0 8px 20px rgba(0,0,0,.12)",minWidth:200,zIndex:60}}
         >
           <button className="w-full text-left px-3 py-2 hover:bg-[#f5f7ff]" onClick={()=>{onPrint?.();setOpen(false);}}>🖨️ Imprimir lista</button>
@@ -342,7 +427,6 @@ const loadDecisions = ()=>{
   try{
     const raw=localStorage.getItem(DEC_KEY);
     const arr = raw?JSON.parse(raw):[];
-    // nunca incluir a tag de limpeza na lista do técnico
     return Array.isArray(arr)?arr.filter(i => (i?.label||"") !== CLEAR_TOKEN):[];
   }catch{ return []; }
 };
@@ -405,7 +489,13 @@ async function getAnimaisFromAPI(){
     const id = a.id||a.animal_id||a.uuid;
     const ultimaIaKey = pick(a, "ultima_ia","data_ultima_ia","ultimaIA","ultimaIa");
     const prevPartoKey = pick(a, "previsao_parto","prev_parto","previsaoParto","previsao_parto_dt");
-    const sitRepKey    = pick(a, "situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro","estado");
+
+    // >>> reprodutiva (NUNCA cair para "estado")
+    const sitRepKey = pick(a, "situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro","situacaoReprodutiva");
+
+    // >>> produtiva (aceita camelCase e outros alias; pode cair para "estado")
+    const sitProdKey = pick(a, "situacao_produtiva","sit_produtiva","situacaoProdutiva","status_produtivo","statusProdutivo","estado_produtivo","estado");
+
     return {
       id,
       numero:a.numero||a.num||a.codigo||"",
@@ -414,8 +504,8 @@ async function getAnimaisFromAPI(){
       ultima_ia:a[ultimaIaKey]||"",
       previsao_parto:a[prevPartoKey]||"",
       situacao_reprodutiva:a[sitRepKey]||"—",
-      situacao_produtiva:a.situacao_produtiva||a.status_prod||"",
-      decisao: (a.decisao === CLEAR_TOKEN ? "" : (a.decisao || "")), // nunca trazer CLEAR_TOKEN pra UI
+      situacao_produtiva:a[sitProdKey]||"",
+      decisao: (a.decisao === CLEAR_TOKEN ? "" : (a.decisao || "")),
       status_geral:(a.status_geral||a.situacao||"").toLowerCase(),
     };
   });
@@ -487,8 +577,15 @@ async function aplicarProtocoloAPI({
 
 async function postDiagnosticoAPI({ animal_id, resultado, dataISO, detalhes }){
   const payload={ animal_id, data:dataISO||toISODate(today()), tipo:"DIAGNOSTICO", resultado, ...(detalhes?{detalhes}:{}) };
-  const { data } = await api.post("/api/v1/reproducao/diagnostico", payload);
-  return data;
+  try {
+    const { data } = await api.post("/api/v1/reproducao/diagnostico", payload);
+    return data;
+  } catch (e) {
+    if (e?.response?.status === 422 && e.response?.data?.detail) {
+      alert(e.response.data.detail);
+    }
+    throw e;
+  }
 }
 
 /* === CLÍNICA: ocorrência + tratamentos + agenda + baixa de estoque === */
@@ -508,7 +605,7 @@ async function postClinicoAPI({
     detalhes: {
       ocorrencia: clin,
       obs: obs || "",
-      tratamentos,                  // [{...}]
+      tratamentos,
       criar_agenda: !!criarAgenda,
       baixar_estoque: !!baixarEstoque,
     },
@@ -553,7 +650,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
   const [decisoes,setDecisoes]=useState(loadDecisions());
   const decisionOptions = useMemo(
     ()=>decisoes
-      .filter(d => (d?.label||"") !== CLEAR_TOKEN)  // nunca oferecer CLEAR_TOKEN
+      .filter(d => (d?.label||"") !== CLEAR_TOKEN)
       .map(d=>({ value:d.id, label:d.label })),
     [decisoes]
   );
@@ -608,36 +705,14 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
   const [busca,setBusca]=useState("");
   const [filtro,setFiltro]=useState("TODOS");
 
-  // Situação reprodutiva normalizada (usa regras + rótulo bruto)
-  function normalizeReprod(a, settings){
-    const base=(a.situacao_reprodutiva||"—").toLowerCase();
-    const prod=(a.situacao_produtiva||"").toLowerCase();
-    const geral=(a.status_geral||"");
-    if(geral.includes("descart")||prod.includes("descart")||base.includes("descart")) return { label:"Descarte", tone:"muted" };
-    if(prod.includes("seca")||base.includes("seca")) return { label:"Seca", tone:"muted" };
-
-    const partoDt=parseBR(a.parto);
-    if(partoDt){ const DEL=diffDays(today(),partoDt); if(DEL<settings.vwpDias) return { label:"PEV", tone:"info" }; }
-
-    if(base.includes("prenhe")) return { label:"Prenhe", tone:"ok" };
-
-    const iaDt = parseAnyDate(a.ultima_ia);
-    if(iaDt){
-      const diasPosIA = diffDays(today(), iaDt);
-      const janela = (settings?.dg60janela?.[1] ?? 75) + 15;
-      if(diasPosIA >= 0 && diasPosIA <= janela) return { label:"Inseminada", tone:"info" };
-    }
-
-    if(base.includes("vazia")) return { label:"Vazia", tone:"warn" };
-    if(base.includes("insemin")) return { label:"Inseminada", tone:"info" };
-    return { label:a.situacao_reprodutiva||"—", tone:"neutro" };
-  }
-
-  const enhanced=useMemo(()=> rows.map(a=>{
-    const _step=buildStep(a,settings);
-    const normRep = normalizeReprod(a, settings);
-    return {...a,_step,normRep};
-  }),[rows,settings]);
+  const enhanced=useMemo(()=>{
+    return rows.map(a=>{
+      const normProd = classifyProd(a, settings);
+      const normRep  = classifyReprod(a, settings, normProd);
+      const _step    = buildStep(a, settings, normRep);
+      return { ...a, normProd, normRep, _step };
+    });
+  },[rows,settings]);
 
   const visibleRows=useMemo(()=>{
     const base = enhanced.filter(a=>(`${a.numero}${a.brinco}`).toLowerCase().includes(busca.trim().toLowerCase()));
@@ -744,6 +819,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
     if(k==="IATF") setPicker({tipo:"IATF",row});
     else if(k==="PRESYNC") setPicker({tipo:"PRESYNC",row});
     else if(k==="DG30"||k==="DG60") setDrawer({open:true,row,initialTab:"DG"});
+    else if(k==="IA") setDrawer({open:true,row,initialTab:"IA"});
   };
 
   const refreshAnimaisAfterChange = async () => {
@@ -780,10 +856,9 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
           detalhes: payload.extras || {}
         });
 
-        // >>> Atualização OTIMISTA após DG
+        // Atualização OTIMISTA após DG
         setRows(prev => prev.map(a => {
           if (a.id !== row.id) return a;
-          // se prenhe, calcula previsão (283 dias da última IA, se houver)
           let previsao = a.previsao_parto;
           if (resultado === "prenhe") {
             const ia = parseAnyDate(a.ultima_ia);
@@ -905,13 +980,16 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
   const printLista=()=>window.print();
 
   const onChangeDecision = async (animalId, option) => {
-    // controla UI imediatamente
-    setDecisaoPorAnimal(prev => ({ ...prev, [animalId]: option?.value || null }));
+    // UI imediata
+    setDecisaoPorAnimal(prev => {
+      const next = { ...prev };
+      if (!option) delete next[animalId]; else next[animalId] = option.value;
+      return next;
+    });
 
     // Persistência:
     try {
       if (!option) {
-        // clear: registramos um evento com CLEAR_TOKEN (compatível com backend)
         await postDecisaoAPI({ animal_id: animalId, decisao: CLEAR_TOKEN });
         return;
       }
@@ -945,7 +1023,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
     const novo = {};
     for (const a of rows) {
       const txt = (a.decisao || "").trim();
-      if (!txt || txt === CLEAR_TOKEN) continue; // nunca pré-selecionar CLEAR
+      if (!txt || txt === CLEAR_TOKEN) continue;
       const id = ensureDecisionExists(txt);
       if(id) novo[a.id] = id;
     }
@@ -1005,9 +1083,6 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
                   const partoPrev=formatBR(calcPrevisaoParto(r));
                   const tone=r._step.key==="DG30"||r._step.key==="DG60"?"info":r._step.key==="IATF"||r._step.key==="PRESYNC"?"ok":r._step.key==="REVIEW"?"warn":"neutro";
                   const sugText=r._step.label+(r._step.dueDate?` • ${formatBR(r._step.dueDate)}`:"");
-                  const rep = r.normRep;
-
-                  const prodLabel = r.situacao_produtiva || "—";
 
                   const selectedId = decisaoPorAnimal[r.id] || null;
                   const selectedOpt = decisionOptions.find(o=>o.value===selectedId) || null;
@@ -1025,8 +1100,8 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
                       <td className={tdBase}>{DEL}</td>
                       <td className={tdBase}>{ultimaIaFmt}</td>
                       <td className={tdBase}>{partoPrev}</td>
-                      <td className={tdBase}>{badge(rep.label, rep.tone)}</td>
-                      <td className={tdBase}>{prodLabel}</td>
+                      <td className={tdBase}>{badge(r.normRep.label, r.normRep.tone)}</td>
+                      <td className={tdBase}>{badge(r.normProd.label, r.normProd.tone)}</td>
                       <td className={tdBase} style={{minWidth:220}}>
                         <CreatableSelect
                           isClearable
@@ -1036,7 +1111,6 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
                           onCreateOption={(label)=>onCreateDecision(label, r.id)}
                           options={decisionOptions}
                           classNamePrefix="rs"
-                          // ⬇️ evita ficar atrás do cabeçalho sticky
                           menuPortalTarget={typeof document !== "undefined" ? document.body : null}
                           styles={{ menuPortal: base => ({ ...base, zIndex: 60 }) }}
                         />
@@ -1079,7 +1153,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
                style={{position:"sticky",bottom:0,background:"#fff",border:"1px solid #e5e7eb",borderRadius:10,padding:"8px 10px",boxShadow:"0 4px 16px rgba(0,0,0,.06)"}}>
             <div style={{fontWeight:700}}>Selecionados: {selecionados.size}</div>
             <span className="text-gray-400">|</span>
-            {/* DG rápido: abre drawer se só 1 selecionado */}
+            {/* DG rápido */}
             <button className="botao-acao pequeno" onClick={()=>dgRapidoAbrirOuLote("Prenhe")}>DG: Prenhe</button>
             <button className="botao-acao pequeno" onClick={()=>dgRapidoAbrirOuLote("Vazia")}>DG: Vazia</button>
             <span className="text-gray-400">|</span>
@@ -1091,7 +1165,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
         )}
 
         <div className="text-xs text-gray-500 mt-2">
-          * "Descarte" será exibido quando o animal vier com status geral/produtivo indicando descarte/inativo. O cadastro de descarte poderá ser feito na sua tela específica (quando implementada) e refletirá aqui automaticamente.
+          * Produtiva: Lactante, Seca (≈60d antes do parto) e Pré-parto (≈21d antes). Reprodutiva: PEV, Pré-sincr., Inseminada, Prenhe, Vazia.
         </div>
       </div>
 

@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "ts": "2025-09-10T21:36:34.099Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/6f0479c3-e9b2-43d4-9824-0eb125636e0e/lote",
+    "userId": "1"
+  },
+  "request": {
+    "lote_id": "8be6d6cd-56e2-4299-9066-0bd9e0ae4116",
+    "lote_nome": "Lote 1"
+  },
+  "response": {
+    "id": "6f0479c3-e9b2-43d4-9824-0eb125636e0e",
+    "owner_id": "1",
+    "numero": "7",
+    "brinco": "7",
+    "nascimento": "01/01/2020",
+    "raca": "Holandês",
+    "estado": "lactante",
+    "sexo": "femea",
+    "categoria": "Adulto(a)",
+    "pai": null,
+    "mae": null,
+    "n_lactacoes": 0,
+    "ultima_ia": null,
+    "parto": null,
+    "previsao_parto": null,
+    "historico": {
+      "lote": {
+        "id": "8be6d6cd-56e2-4299-9066-0bd9e0ae4116",
+        "nome": "Lote 1",
+        "updated_at": "2025-09-10T21:36:34.125Z"
+      }
+    },
+    "created_at": "2025-09-10T16:26:31.866Z",
+    "updated_at": "2025-09-10T21:36:34.127Z",
+    "current_lote_id": "8be6d6cd-56e2-4299-9066-0bd9e0ae4116",
+    "current_lote_nome": "Lote 1"
+  }
+}

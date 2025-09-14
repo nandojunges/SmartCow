@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "ts": "2025-09-12T22:59:06.719Z",
+    "method": "POST",
+    "url": "/api/v1/animals",
+    "userId": "1"
+  },
+  "request": {
+    "numero": "13",
+    "brinco": "13",
+    "nascimento": "01/01/2022",
+    "sexo": "femea",
+    "raca": "Holandês",
+    "categoria": "Adulto(a)",
+    "estado": "lactante",
+    "situacao_produtiva": "lactante",
+    "situacao_reprodutiva": "inseminada",
+    "pai": "sdfg",
+    "mae": "34",
+    "n_lactacoes": 1,
+    "ultima_ia": null,
+    "parto": "04/05/2025",
+    "ultimo_parto": "04/05/2025",
+    "previsao_parto": null,
+    "previsao_parto_iso": null,
+    "historico": {
+      "inseminacoes": [],
+      "partos": [],
+      "secagens": []
+    }
+  },
+  "response": {
+    "error": "ValidationError",
+    "issues": [
+      {
+        "path": "ultima_ia",
+        "message": "Expected string, received null",
+        "code": "invalid_type"
+      },
+      {
+        "path": "previsao_parto",
+        "message": "Expected string, received null",
+        "code": "invalid_type"
+      }
+    ]
+  }
+}

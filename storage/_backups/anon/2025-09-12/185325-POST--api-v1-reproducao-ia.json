@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "ts": "2025-09-12T21:53:25.475Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/ia",
+    "userId": "anon"
+  },
+  "request": {
+    "animal_id": "4cef0289-c730-406c-baa0-57db6503e2e1",
+    "data": "2025-09-12",
+    "detalhes": {
+      "touro_id": "6fcc0622-9fe1-47a6-9bff-1882d77fbd29",
+      "inseminador_id": "0b09d9d9-d2b7-4d9e-a464-e3fcc91f1024",
+      "obs": "Razão: Montando | Sêmen: Convencional | Palhetas: 1"
+    }
+  },
+  "response": {
+    "id": "42b2a25a-3f4c-4113-ac1a-2fc59ed3406e",
+    "animal_id": "4cef0289-c730-406c-baa0-57db6503e2e1",
+    "data": "2025-09-12T03:00:00.000Z",
+    "tipo": "IA",
+    "detalhes": {
+      "obs": "Razão: Montando | Sêmen: Convencional | Palhetas: 1",
+      "touro_id": "6fcc0622-9fe1-47a6-9bff-1882d77fbd29",
+      "inseminador_id": "0b09d9d9-d2b7-4d9e-a464-e3fcc91f1024"
+    },
+    "resultado": null,
+    "protocolo_id": null,
+    "aplicacao_id": null,
+    "created_at": "2025-09-12T21:53:25.634Z",
+    "updated_at": "2025-09-12T21:53:25.634Z"
+  }
+}

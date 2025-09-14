@@ -22,7 +22,7 @@ import {
 const RAW_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const API_ROOT = RAW_BASE ? `${RAW_BASE}/api/v1` : "/api/v1";
 const API_REPRO = `${API_ROOT}/reproducao`;
-const API_ANIM = `${API_ROOT}/reproducao/animais`;
+const API_ANIM  = `${API_ROOT}/animals`; // derivados apenas
 
 function authHeaders() {
   const token = localStorage.getItem("token");
@@ -41,6 +41,14 @@ async function apiDelete(url) {
   if (!r.ok) throw new Error(`${r.status}`);
   try { return await r.json(); } catch { return { ok: true }; }
 }
+
+async function apiPost(url, payload) {
+  const r = await fetch(url, { method: "POST", headers: authHeaders(), body: JSON.stringify(payload || {}) });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}
+
+// ações: usam as rotas do backend (validações de janela/422 já no PR #6)
 
 /* ========= Datas ========= */
 const DAY = 86400000;
@@ -172,6 +180,9 @@ function normalizeFromEventos(items = []) {
         e.tipo === "DIAGNOSTICO" ? "Diagnostico" :
         e.tipo === "DECISAO" ? "Decisão" :
         e.tipo === "TRATAMENTO" ? "Tratamento" :
+        e.tipo === "PRE_PARTO" ? "Pré-parto" :
+        e.tipo === "SECAGEM" ? "Secagem" :
+        e.tipo === "PERDA_REPRODUTIVA" ? "Perda reprodutiva" :
         (e.tipo || "Evento"),
       nomeProtocolo: e.detalhes?.origem_protocolo || null,
       obs:
@@ -185,6 +196,34 @@ function normalizeFromEventos(items = []) {
     }));
 
   return { inseminacoes: ias, partos, secagens, diagnosticosGestacao, ocorrenciasAll: ocorrencias, eventosRaw: eventos };
+}
+
+// pinta tipos/cores + tooltip rico (usa detalhes do backend)
+function processarEventosParaTimeline(evs){
+  return (evs||[]).map(e=>{
+    const tipo = e.tipo;
+    let cor = '#64748b';
+    if (tipo==='IA') cor='#2563eb';
+    else if (tipo==='DIAGNOSTICO') cor='#06b6d4';
+    else if (tipo==='TRATAMENTO') cor='#f59e0b';
+    else if (tipo==='SECAGEM') cor='#8b5cf6';
+    else if (tipo==='PARTO') cor='#22c55e';
+    else if (tipo==='PROTOCOLO_ETAPA') cor='#7c3aed';
+    else if (tipo==='DECISAO') cor='#6b7280';
+    const d = e.detalhes || {};
+    const hover = {
+      data: e.data,
+      janela_dg: e.janela_dg || d.janela,
+      ia_ref_data: e.ia_ref_data || d.ia_ref_data,
+      origem_protocolo: e.origem_protocolo || d.origem_protocolo,
+      parent_aplicacao_id: e.parent_aplicacao_id || d.parent_aplicacao_id,
+      touro_id: d.touro_id,
+      inseminador_id: d.inseminador_id,
+      observacao: d.observacao,
+      resultado: e.resultado
+    };
+    return { ...e, _ui:{ cor, label:e.tipo_humano||tipo, hover } };
+  });
 }
 
 /* ========= Persistência local (edições rápidas) ========= */
@@ -233,6 +272,16 @@ export default function FichaAnimalReproducao({ animal }) {
   const [historicoRemoto, setHistoricoRemoto] = useState(null);
   const [ocorrencias, setOcorrencias] = useState([]); // normalizadas a partir dos eventos
   const [animalId, setAnimalId] = useState(null);
+  const [eventos, setEventos] = useState([]);
+  const [animalDeriv, setAnimalDeriv] = useState(null);
+  const [agenda, setAgenda] = useState([]);
+  const [range, setRange] = useState(() => {
+    const today = new Date();
+    const start = new Date(today); start.setDate(start.getDate()-7);
+    const end = new Date(today); end.setDate(end.getDate()+35);
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return { start: iso(start), end: iso(end) };
+  });
 
   // carregar ciclos editados (local)
   useEffect(() => { setCiclosEditados(getCiclosLS(animal?.numero || "vaca")); }, [animal?.numero]);
@@ -254,18 +303,11 @@ export default function FichaAnimalReproducao({ animal }) {
     const id = await resolverAnimalId(animal);
     setAnimalId(id);
     if (!id) return;
+    await carregarTimeline(id);
+    const anim = await apiGet(`${API_ANIM}/${encodeURIComponent(id)}`);
+    setAnimalDeriv(anim);
 
-    // 1) eventos do animal
-    const data = await apiGet(`${API_REPRO}/eventos/animal/${encodeURIComponent(id)}`);
-    const items = Array.isArray(data?.items) ? data.items : [];
-    const norm = normalizeFromEventos(items);
-    setHistoricoRemoto({
-      inseminacoes: norm.inseminacoes,
-      partos: norm.partos,
-      secagens: norm.secagens,
-      diagnosticosGestacao: norm.diagnosticosGestacao,
-    });
-    setOcorrencias(norm.ocorrenciasAll);
+    await carregarCalendario(id);
 
     // notifica que veio atualização (para outras telas que escutam)
     window.dispatchEvent(new Event("registroReprodutivoAtualizado"));
@@ -277,6 +319,100 @@ export default function FichaAnimalReproducao({ animal }) {
     window.addEventListener("registroReprodutivoAtualizado", h);
     return () => window.removeEventListener("registroReprodutivoAtualizado", h);
   }, [animal?.id, animal?.numero]);
+
+  async function carregarTimeline(id = animalId) {
+    if (!id) return;
+    const data = await apiGet(`${API_REPRO}/eventos/animal/${encodeURIComponent(id)}`);
+    const items = Array.isArray(data?.items) ? data.items : [];
+    setEventos(processarEventosParaTimeline(items));
+    const norm = normalizeFromEventos(items);
+    setHistoricoRemoto({
+      inseminacoes: norm.inseminacoes,
+      partos: norm.partos,
+      secagens: norm.secagens,
+      diagnosticosGestacao: norm.diagnosticosGestacao,
+    });
+    setOcorrencias(norm.ocorrenciasAll);
+  }
+
+  async function carregarCalendario(id = animalId) {
+    if (!id) return;
+    const qs = `start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}`;
+    const data = await apiGet(`${API_REPRO}/calendario?${qs}`);
+    const itens = Array.isArray(data?.itens) ? data.itens : [];
+    const mine = itens.filter(it => !it.animal_id || String(it.animal_id) === String(id));
+    setAgenda(normalizarTarefasCalendario(mine));
+  }
+
+  useEffect(() => {
+    carregarCalendario();
+    const h = () => carregarCalendario();
+    window.addEventListener('atualizarCalendario', h);
+    window.addEventListener('registroReprodutivoAtualizado', h);
+    return () => {
+      window.removeEventListener('atualizarCalendario', h);
+      window.removeEventListener('registroReprodutivoAtualizado', h);
+    };
+  }, [range.start, range.end, animalId]);
+
+  async function afterMutacao(id) {
+    const target = id || animalId;
+    await carregarCalendario(target);
+    await carregarTimeline(target);
+  }
+
+  const TYPE_META = {
+    PROTOCOLO_ETAPA: { cor:'#7c3aed', ic:'🧪', rot:'Etapa de Protocolo' },
+    TRATAMENTO:      { cor:'#f59e0b', ic:'💊', rot:'Dose de Tratamento' },
+    PREV_DG30:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG30' },
+    PREV_DG60:       { cor:'#06b6d4', ic:'🔎', rot:'Previsão DG60' },
+    PRE_PARTO_INICIO:{ cor:'#22c55e', ic:'🌿', rot:'Início Pré-Parto' },
+    PARTO_PREVISTO:  { cor:'#22c55e', ic:'👶', rot:'Parto Previsto' },
+    SECAGEM:         { cor:'#7e22ce', ic:'🟣', rot:'Secagem' },
+    SECAGEM_PREVISTA:{ cor:'#a78bfa', ic:'🟣', rot:'Secagem Prevista' },
+  };
+  function normalizarTarefasCalendario(itens) {
+    return (itens || []).map(raw => {
+      const tipo = raw.tipo;
+      const meta = TYPE_META[tipo] || { cor:'#64748b', ic:'📌', rot:tipo };
+      const tip = {
+        data: raw.data,
+        tipo,
+        protocolo: raw.origem_protocolo || raw.protocolo_id,
+        aplicacao: raw.aplicacao_id,
+        ref_ia: raw.ref_ia,
+        observacao: raw.detalhes?.observacao
+      };
+      return {
+        ...raw,
+        _ui: { cor: meta.cor, icone: meta.ic, rotulo: meta.rot, tooltip: tip },
+        _cancellable: Boolean(raw.aplicacao_id || raw.id || raw.evento_id)
+      };
+    }).sort((a,b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0));
+  }
+
+  async function cancelarTarefa(t) {
+    try {
+      if (t.aplicacao_id) {
+        await apiDelete(`${API_REPRO}/aplicacao/${t.aplicacao_id}`);
+      } else if (t.evento_id || t.id) {
+        const idDel = t.evento_id || t.id;
+        await apiDelete(`${API_REPRO}/eventos/${idDel}`);
+      } else {
+        return;
+      }
+      await afterMutacao(t.animal_id);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function registrarIA(payload){ const r=await apiPost(`${API_REPRO}/ia`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function registrarDG(payload){ const r=await apiPost(`${API_REPRO}/diagnostico`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function aplicarProtocolo(payload){ const r=await apiPost(`${API_REPRO}/aplicar-protocolo`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function iniciarTratamento(payload){ const r=await apiPost(`${API_REPRO}/tratamento`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function registrarSecagem(payload){ const r=await apiPost(`${API_REPRO}/secagem`, payload); await afterMutacao(payload?.animal_id); return r; }
+  async function registrarParto(payload){ const r=await apiPost(`${API_REPRO}/parto`, payload); await afterMutacao(payload?.animal_id); return r; }
 
   // ---- usa historico remoto (do backend) se disponível; senão o do prop:
   const histMerged = useMemo(() => {
@@ -383,22 +519,35 @@ export default function FichaAnimalReproducao({ animal }) {
     return eventos.sort((a,b)=>toDateBR(a.data)-toDateBR(b.data));
   }, [ciclos, ciclosEditados]);
 
+  // KPIs: IA+ = DG+ pareado OU parto subsequente; IA− = DG− pareado OU retorno de cio (18–25d sem DG+)
   const taxaIA = useMemo(() => {
-    let pos=0, neg=0;
-    ciclos.forEach(c=>{
-      const ordenadas = [...(c.ia || [])].sort((a,b)=>toDateBR(a.data)-toDateBR(b.data));
+    let pos = 0, neg = 0;
+    const diagnosticos = histMerged?.diagnosticosGestacao || [];
+    ciclos.forEach(c => {
+      const ordenadas = [...(c.ia || [])].sort((a,b) => toDateBR(a.data) - toDateBR(b.data));
       const partoData = c.parto?.data ? toDateBR(c.parto.data) : null;
-      let idxUltimaValida = -1;
-      if (partoData) for (let j=ordenadas.length-1;j>=0;j--) { const iaDate = toDateBR(ordenadas[j].data); if (iaDate && iaDate < partoData) { idxUltimaValida = j; break; } }
-      ordenadas.forEach((ia,idx)=>{ if (ia.diagnostico==="positivo") pos++; else if (!ia.diagnostico && idx===idxUltimaValida) pos++; else neg++; });
+      ordenadas.forEach((ia, idx) => {
+        const iaDate = toDateBR(ia.data);
+        if (!iaDate) return;
+        const dx = diagnosticos.find(d => d.dataIA === ia.data);
+        if (dx?.resultado === "positivo") { pos++; return; }
+        if (dx?.resultado === "negativo") { neg++; return; }
+        if (partoData && (!ordenadas[idx+1] || toDateBR(ordenadas[idx+1].data) > partoData)) { pos++; return; }
+        const proxIA = ordenadas[idx+1] ? toDateBR(ordenadas[idx+1].data) : null;
+        if (proxIA) {
+          const diff = Math.floor((proxIA - iaDate) / DAY);
+          if (diff >= 18 && diff <= 25) neg++;
+        }
+      });
     });
-    const taxa = (pos+neg)>0 ? (pos/(pos+neg))*100 : 0;
+    const taxa = (pos + neg) > 0 ? (pos / (pos + neg)) * 100 : 0;
     return { pos, neg, taxa };
-  }, [ciclos]);
+  }, [ciclos, histMerged]);
 
   /* ===== Ações backend ===== */
   async function excluirEventoById(id) {
     await apiDelete(`${API_REPRO}/eventos/${encodeURIComponent(id)}`);
+    await afterMutacao();
   }
   async function cancelarAplicacao(aplicacaoId) {
     await apiDelete(`${API_REPRO}/aplicacao/${encodeURIComponent(aplicacaoId)}`);
@@ -407,6 +556,7 @@ export default function FichaAnimalReproducao({ animal }) {
     window.dispatchEvent(new Event("registroReprodutivoAtualizado"));
     window.dispatchEvent(new Event("atualizarCalendario"));
     window.dispatchEvent(new Event("tarefasAtualizadas"));
+    await afterMutacao();
   }
 
   function normalizaTipo(t) {
@@ -447,6 +597,48 @@ export default function FichaAnimalReproducao({ animal }) {
             <LinhaDoTempoCompacta eventos={eventosLinha}/>
             <LegendTimeline/>
           </Card>
+
+          {/* Calendário — apresentação de tarefas */}
+          <section className="mt-6">
+            <header style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+              <strong>Calendário (tarefas)</strong>
+              <input type="date" value={range.start} onChange={e=>setRange(r=>({...r,start:e.target.value}))}/>
+              <span>→</span>
+              <input type="date" value={range.end} onChange={e=>setRange(r=>({...r,end:e.target.value}))}/>
+              <button onClick={carregarCalendario}>Atualizar</button>
+            </header>
+
+            {/* Agrupa por dia */}
+            {Object.entries(agenda.reduce((acc,t)=>{
+              (acc[t.data]??=[]).push(t); return acc;
+            }, {})).map(([dia, itens])=>(
+              <div key={dia} style={{marginBottom:12}}>
+                <div style={{fontWeight:600, opacity:.8, marginBottom:4}}>{dia}</div>
+                {itens.map((t,i)=>(
+                  <div key={i} style={{
+                    display:'flex', alignItems:'center', gap:8,
+                    padding:'6px 8px', borderRadius:8, border:'1px solid #e5e7eb'
+                  }}>
+                    <span style={{fontSize:18}}>{t._ui.icone}</span>
+                    <span style={{width:10,height:10,borderRadius:999,background:t._ui.cor}}/>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:600}}>{t._ui.rotulo}</div>
+                      <div style={{fontSize:12,opacity:.8}}>
+                        {t._ui.tooltip?.protocolo ? `Protocolo: ${t._ui.tooltip.protocolo} • ` : ''}
+                        {t._ui.tooltip?.ref_ia ? `Ref IA: ${t._ui.tooltip.ref_ia} • ` : ''}
+                        {t._ui.tooltip?.observacao ? t._ui.tooltip.observacao : ''}
+                      </div>
+                    </div>
+                    {t._cancellable && (
+                      <button onClick={()=>cancelarTarefa(t)} style={{fontSize:12}}>
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </section>
 
           <Card title="DEL por Lactação (dias)">
             <GraficoDELporLactacao delPorCiclo={delPorCiclo}/>

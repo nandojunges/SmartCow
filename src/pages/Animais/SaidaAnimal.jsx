@@ -1,6 +1,6 @@
-// src/pages/Animais/SaidaAnimal.jsx
 import React, { useMemo, useState } from 'react';
 import Select from 'react-select';
+import api from '../../api'; // default export = apiV1
 
 export default function SaidaAnimal({ animais = [], onAtualizar }) {
   const [animalSelecionado, setAnimalSelecionado] = useState(null);
@@ -11,6 +11,7 @@ export default function SaidaAnimal({ animais = [], onAtualizar }) {
   const [valor, setValor] = useState('');
   const [erros, setErros] = useState({});
   const [ok, setOk] = useState('');
+  const [salvando, setSalvando] = useState(false);
 
   const motivosVenda = [
     'Baixa produção','Problemas reprodutivos','Problemas de casco','Excesso de animais',
@@ -51,46 +52,77 @@ export default function SaidaAnimal({ animais = [], onAtualizar }) {
     return Object.keys(e).length === 0;
   };
 
-  const submit = () => {
-    if (!validar()) return;
+  const submit = async () => {
+    if (!validar() || salvando) return;
+    setSalvando(true);
+    try {
+      // procurar o animal pelo id selecionado
+      const alvo = (Array.isArray(animais) ? animais : []).find(a => a.id === animalSelecionado?.value);
+      if (!alvo?.id) throw new Error('Animal não encontrado pela seleção.');
 
-    const numeroAlvo = String(animalSelecionado?.value);
-    const novaLista = (Array.isArray(animais) ? animais : []).map((a) => {
-      if (String(a.numero) !== numeroAlvo) return a;
+      // payload que o backend espera (resource /saida)
+      const payload = {
+        tipo_saida: tipo,
+        motivo_saida: motivo,
+        observacao_saida: observacao,
+        data_saida: data, // dd/mm/aaaa
+      };
 
-      const saida = {
-        tipo,
-        motivo,
-        data,
-        observacao,
+      // persistência
+      const { data: atualizado } = await api.post(`/animals/${alvo.id}/saida`, payload);
+
+      // Anexamos o valor de venda no objeto local (backend não armazena esse campo)
+      const saidaLocal = {
+        tipo, motivo, data, observacao,
         valor: tipo === 'venda' ? valor : undefined,
         dataISO: new Date().toISOString(),
         idSaida: Date.now(),
       };
 
-      return {
-        ...a,
-        status: 'inativo',
-        saida,
-        motivoSaida: saida.motivo,
-        dataSaida: saida.data,
-        valorVenda: saida.valor,
-        observacoesSaida: saida.observacao,
-        tipoSaida: saida.tipo,
-      };
-    });
+      const novaLista = (Array.isArray(animais) ? animais : []).map((a) =>
+        a.id === alvo.id
+          ? {
+              ...a,
+              ...atualizado, // status inativo + colunas *_saida/historico conforme resource
+              saida: saidaLocal,
+              tipoSaida: saidaLocal.tipo,
+              motivoSaida: saidaLocal.motivo,
+              dataSaida: saidaLocal.data,
+              valorVenda: saidaLocal.valor,
+              observacoesSaida: saidaLocal.observacao,
+            }
+          : a
+      );
 
-    onAtualizar?.(novaLista);
+      onAtualizar?.(novaLista);
+      setOk('✅ Saída registrada com sucesso!');
+      setTimeout(() => setOk(''), 3000);
 
-    setOk('✅ Saída registrada com sucesso!');
-    setTimeout(() => setOk(''), 3000);
-    setAnimalSelecionado(null); setTipo(''); setMotivo(''); setData(''); setObservacao(''); setValor('');
+      // reset
+      setAnimalSelecionado(null);
+      setTipo('');
+      setMotivo('');
+      setData('');
+      setObservacao('');
+      setValor('');
+      setErros({});
+    } catch (err) {
+      console.error('Falha ao registrar saída:', err);
+      const msg = err?.response?.data?.error || err?.message || 'Erro ao registrar saída';
+      setOk(`❌ ${msg}`);
+      setTimeout(() => setOk(''), 5000);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const opcoesAnimais = useMemo(
     () => (Array.isArray(animais) ? animais : [])
-      .filter(a => a.status !== 'inativo')
-      .map(a => ({ value: a.numero, label: `${a.numero} – Brinco ${a.brinco || '—'}` })),
+      .filter(a => (a.status ?? 'ativo') !== 'inativo')
+      .map(a => ({
+        value: a.id, // usa ID para bater com a API /:id/saida
+        label: `${a.numero || '—'} – Brinco ${a.brinco || '—'}`,
+      })),
     [animais]
   );
 
@@ -98,7 +130,9 @@ export default function SaidaAnimal({ animais = [], onAtualizar }) {
     <div className="max-w-[1100px] mx-auto font-[Poppins,sans-serif] px-4 pt-0 pb-4 -mt-4">
       <div className="bg-white p-8 rounded-2xl shadow-md">
         {ok && (
-          <div className="bg-emerald-50 text-emerald-900 border border-emerald-400 px-4 py-3 rounded mb-6 font-medium flex items-center gap-2">
+          <div className={`px-4 py-3 rounded mb-6 font-medium flex items-center gap-2 border ${
+            ok.startsWith('✅') ? 'bg-emerald-50 text-emerald-900 border-emerald-400' : 'bg-red-50 text-red-900 border-red-400'
+          }`}>
             {ok}
           </div>
         )}
@@ -174,9 +208,10 @@ export default function SaidaAnimal({ animais = [], onAtualizar }) {
         <div className="mt-8 flex justify-start">
           <button
             onClick={submit}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg"
+            disabled={salvando}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold px-6 py-3 rounded-lg"
           >
-            💾 Registrar Saída
+            {salvando ? '⏳ Gravando...' : '💾 Registrar Saída'}
           </button>
         </div>
       </div>

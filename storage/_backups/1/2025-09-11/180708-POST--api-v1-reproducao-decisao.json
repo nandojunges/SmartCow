@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "ts": "2025-09-11T21:07:08.325Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/decisao",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "85905ea4-e733-4a9b-90f1-10ba6b8bfdaf",
+    "decisao": "Infusão"
+  },
+  "response": {
+    "ok": true
+  }
+}

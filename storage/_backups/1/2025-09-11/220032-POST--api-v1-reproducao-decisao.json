@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "ts": "2025-09-12T01:00:32.286Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/decisao",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "ffc5fe26-67fd-4951-94d3-69012ca5f8b8",
+    "decisao": "__CLEAR__"
+  },
+  "response": {
+    "ok": true
+  }
+}

@@ -1,5 +1,9 @@
-// backend/resources/crudRouter.js (ESM) — CRUD genérico, seguro p/ login/cadastro
+// backend/resources/crudRouter.js (ESM) — CRUD genérico, com logs e ZodError friendly
 import express from 'express';
+
+/* =============================================================================
+ * Helpers
+ * ========================================================================== */
 
 // Extrai userId do token (sem verificar assinatura; mesmo helper dos resources)
 function extractUserId(req) {
@@ -7,7 +11,7 @@ function extractUserId(req) {
   let id = u.id || u.userId || req.userId || u.sub || null;
   if (!id) {
     const auth = req.headers?.authorization || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    const token = auth && auth.startsWith('Bearer ') ? auth.slice(7) : null;
     try {
       if (token) {
         const payload = JSON.parse(
@@ -21,23 +25,54 @@ function extractUserId(req) {
 }
 
 // Normaliza respostas de erro (400 validação, 401 escopo, 409 conflito, 500 padrão)
+// -> agora detecta ZodError, devolve issues "flatten" e loga no servidor
 function respondError(res, err, fallback = 'Erro interno') {
+  const isZod =
+    err?.name === 'ZodError' ||
+    Array.isArray(err?.issues) ||
+    typeof err?.flatten === 'function';
+
+  // Logs úteis (no servidor)
+  if (isZod) {
+    const flat = typeof err.flatten === 'function' ? err.flatten() : null;
+    console.error('[VALIDATION] ZodError:', flat
+      ? { fieldErrors: flat.fieldErrors, formErrors: flat.formErrors }
+      : err.issues || err);
+  } else {
+    // Log compacto de erros não-Zod
+    const code = err?.code ? ` code=${err.code}` : '';
+    console.error(`[ERROR] ${err?.message || fallback}${code}`);
+    if (process.env.NODE_ENV !== 'production') {
+      // Em dev, ajuda ver a stack
+      if (err?.stack) console.error(err.stack);
+    }
+  }
+
+  // Mapeia status
   const status =
+    (isZod && 400) ||
     err?.statusCode ||
     err?.status ||
     (err?.code === '23505' ? 409 : 500);
 
-  const body = (() => {
-    if (status === 400 && err?.details) {
-      return { error: 'ValidationError', issues: err.details };
-    }
-    if (status === 401) return { error: 'Unauthorized' };
-    if (status === 409) return { error: 'Conflict', detail: err?.detail || err?.message };
-    return { error: err?.message || fallback };
-  })();
+  // Corpo da resposta
+  if (isZod) {
+    const flat = typeof err.flatten === 'function' ? err.flatten() : null;
+    const body = flat
+      ? { error: 'ValidationError', fieldErrors: flat.fieldErrors, formErrors: flat.formErrors }
+      : { error: 'ValidationError', issues: err.issues };
+    return res.status(400).json(body);
+  }
 
-  return res.status(status).json(body);
+  if (status === 401) return res.status(401).json({ error: 'Unauthorized' });
+  if (status === 409) return res.status(409).json({ error: 'Conflict', detail: err?.detail || err?.message });
+
+  return res.status(status).json({ error: err?.message || fallback });
 }
+
+/* =============================================================================
+ * Fábrica de CRUD
+ * ========================================================================== */
 
 export function makeCrudRouter(cfg, db) {
   const router = express.Router();
@@ -45,10 +80,10 @@ export function makeCrudRouter(cfg, db) {
 
   const table = cfg.table;
   const idCol = cfg.id || 'id';
-  const listFields = cfg.listFields?.length ? cfg.listFields : ['*'];
+  const listFields = Array.isArray(cfg.listFields) && cfg.listFields.length ? cfg.listFields : ['*'];
   const searchFields = cfg.searchFields || [];
   const sortable = new Set([idCol, ...(cfg.sortable || [])]);
-  const scope = cfg.scope || null;
+  const scope = cfg.scope || null; // { column?: 'owner_id', required?: true }
 
   function applyScope(where, params, req) {
     if (!scope) return;
@@ -79,7 +114,10 @@ export function makeCrudRouter(cfg, db) {
       if (!sortable.has(sort)) sort = idCol;
       if (!['asc', 'desc'].includes(order)) order = 'desc';
 
-      const fieldsSql = listFields.map(f => `"${f}"`).join(',');
+      const fieldsSql = listFields[0] === '*'
+        ? '*'
+        : listFields.map(f => `"${f}"`).join(',');
+
       const where = [];
       const params = [];
 
@@ -123,7 +161,11 @@ export function makeCrudRouter(cfg, db) {
       const params = [req.params.id];
       applyScope(where, params, req);
 
-      const sql = `SELECT ${listFields.map(f => `"${f}"`).join(',')}
+      const fieldsSql = listFields[0] === '*'
+        ? '*'
+        : listFields.map(f => `"${f}"`).join(',');
+
+      const sql = `SELECT ${fieldsSql}
                    FROM "${table}"
                    WHERE ${where.join(' AND ')}
                    LIMIT 1`;
@@ -140,7 +182,15 @@ export function makeCrudRouter(cfg, db) {
   router.post('/', async (req, res) => {
     try {
       let body = req.body || {};
-      if (cfg.validateCreate) body = cfg.validateCreate(body); // função pura (Zod)
+
+      // Validação (Zod) com resposta amigável
+      if (typeof cfg.validateCreate === 'function') {
+        try {
+          body = cfg.validateCreate(body); // função pura (deve retornar objeto "limpo")
+        } catch (e) {
+          return respondError(res, e, 'Erro de validação');
+        }
+      }
 
       const defaults =
         typeof cfg.defaults === 'function'
@@ -148,7 +198,7 @@ export function makeCrudRouter(cfg, db) {
           : (cfg.defaults || {});
       const record = { ...defaults, ...body };
 
-      // escopo obrigatório (owner_id)
+      // Escopo obrigatório (ex.: owner_id)
       if (scope?.required) {
         const col = scope.column || 'owner_id';
         const uid = extractUserId(req);
@@ -170,7 +220,11 @@ export function makeCrudRouter(cfg, db) {
       const r = await q(sql, params);
       const newId = r.rows?.[0]?.[idCol];
 
-      const getSql = `SELECT ${listFields.map(f => `"${f}"`).join(',')}
+      const fieldsSql = listFields[0] === '*'
+        ? '*'
+        : listFields.map(f => `"${f}"`).join(',');
+
+      const getSql = `SELECT ${fieldsSql}
                       FROM "${table}"
                       WHERE "${idCol}" = $1
                       LIMIT 1`;
@@ -186,7 +240,15 @@ export function makeCrudRouter(cfg, db) {
   router.put('/:id', async (req, res) => {
     try {
       let body = req.body || {};
-      if (cfg.validateUpdate) body = cfg.validateUpdate(body); // função pura (Zod)
+
+      // Validação (Zod) com resposta amigável
+      if (typeof cfg.validateUpdate === 'function') {
+        try {
+          body = cfg.validateUpdate(body); // função pura (pode ser parcial)
+        } catch (e) {
+          return respondError(res, e, 'Erro de validação');
+        }
+      }
 
       const keys = Object.keys(body).filter(k => k !== idCol);
       if (!keys.length) return res.status(400).json({ error: 'Nada para atualizar' });
@@ -211,7 +273,11 @@ export function makeCrudRouter(cfg, db) {
       const r = await q(sql, params);
       if (!r.rowCount) return res.status(404).json({ error: 'Não encontrado' });
 
-      const getSql = `SELECT ${listFields.map(f => `"${f}"`).join(',')}
+      const fieldsSql = listFields[0] === '*'
+        ? '*'
+        : listFields.map(f => `"${f}"`).join(',');
+
+      const getSql = `SELECT ${fieldsSql}
                       FROM "${table}"
                       WHERE "${idCol}" = $1
                       LIMIT 1`;

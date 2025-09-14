@@ -31,44 +31,46 @@ function parseBR(str) {
 function formatBR(dt) { return dt ? dt.toLocaleDateString("pt-BR") : "—"; }
 function addDays(dt, n) { const d = new Date(dt.getTime()); d.setDate(d.getDate() + n); return d; }
 function calcPrevisaoParto(animal) {
-  // Usa o que estiver no banco; se não tiver, cai para Última IA + 280
   const direto = parseBR(animal?.previsao_parto || animal?.previsaoParto);
   if (direto) return direto;
   const ia = parseBR(animal?.ultima_ia || animal?.ultimaIa);
   return ia ? addDays(ia, 280) : null;
 }
 
-/* === detecção/extração de campo de lote no animal === */
+/* === lote no animal === */
 const LOTE_ID_KEYS = ["current_lote_id", "lote_id", "loteId", "grupo_id", "grupoId"];
 const LOTE_NOME_KEYS = ["current_lote_nome", "lote_nome", "loteNome", "grupo_nome", "grupoNome"];
 
 function extractLoteFrom(obj) {
   if (!obj || typeof obj !== "object") return { id: null, nome: null };
-
-  // 1) chaves planas
   for (const k of LOTE_ID_KEYS) if (obj[k] != null) {
     const id = obj[k];
     let nome = null;
     for (const kk of LOTE_NOME_KEYS) if (obj[kk] != null) { nome = obj[kk]; break; }
     return { id, nome };
   }
-
-  // 2) historico.lote
   if (obj.historico && typeof obj.historico === "object" && obj.historico.lote) {
     const l = obj.historico.lote;
     return { id: l?.id ?? null, nome: l?.nome ?? null };
   }
-
-  // 3) objeto lote/grupo
   if (obj.lote && typeof obj.lote === "object") {
     return { id: obj.lote.id ?? obj.loteId ?? null, nome: obj.lote.nome ?? obj.loteNome ?? null };
   }
   if (obj.grupo && typeof obj.grupo === "object") {
     return { id: obj.grupo.id ?? obj.grupoId ?? null, nome: obj.grupo.nome ?? obj.grupoNome ?? null };
   }
-
   return { id: null, nome: null };
 }
+
+/* === ativo x inativo (ONE SOURCE OF TRUTH) === */
+function isInativo(a) {
+  const st = String(a?.status ?? "").toLowerCase();
+  if (st === "inativo") return true;
+  if (a?.tipo_saida || a?.motivo_saida || a?.data_saida) return true;
+  const saiu = Array.isArray(a?.historico?.saidas) && a.historico.saidas.length > 0;
+  return saiu;
+}
+const isAtivo = (a) => !isInativo(a);
 
 /* ===== estilos tabela ===== */
 const STICKY_OFFSET = 48;
@@ -107,21 +109,31 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
   const [rows, setRows] = useState(Array.isArray(animais) ? animais : []);
   useEffect(() => setRows(Array.isArray(animais) ? animais : []), [animais]);
 
+  // some do plantel tudo que estiver inativo
   const visibleRows = useMemo(
-    () => (Array.isArray(rows) ? rows : []).filter(
-      (v) => (v.status ?? "ativo") !== "inativo" && !v.tipo_saida
-    ),
+    () => (Array.isArray(rows) ? rows : []).filter(isAtivo),
     [rows]
   );
 
+  // qualquer cálculo futuro use visibleRows (só ativos)
   useEffect(() => { onCountChange?.(visibleRows.length); }, [visibleRows.length, onCountChange]);
+
+  // se algum outro lugar disparar evento de saída, removemos aqui
+  useEffect(() => {
+    const h = (e) => {
+      const id = e?.detail?.id;
+      setRows(prev => id ? prev.filter(r => r.id !== id) : prev.filter(isAtivo));
+    };
+    window.addEventListener("saida-registrada", h);
+    return () => window.removeEventListener("saida-registrada", h);
+  }, []);
 
   const [hoverCol, setHoverCol] = useState(null);
   const [editAnimal, setEditAnimal] = useState(null);
   const [fichaOpen, setFichaOpen] = useState(false);
   const [animalFicha, setAnimalFicha] = useState(null);
 
-  /* lotes ativos (sem contagem fixa) */
+  /* lotes ativos */
   const [lotes, setLotes] = useState([]);
   useEffect(() => {
     let alive = true;
@@ -139,9 +151,9 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
     return () => { alive = false; };
   }, []);
 
-  /* contagem dinâmica por lote baseada nos ANIMAIS visíveis */
+  /* contagem por lote baseada nos ATIVOS */
   const loteCounts = useMemo(() => {
-    const map = new Map(); // id -> count
+    const map = new Map();
     for (const a of visibleRows) {
       const { id } = extractLoteFrom(a);
       if (id == null) continue;
@@ -150,7 +162,6 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
     return map;
   }, [visibleRows]);
 
-  /* buscar animal atualizado (para ler o campo real que o backend devolve) */
   async function fetchAnimalById(id) {
     try { const { data } = await api.get(`/api/v1/animals/${id}`, { headers: { "Cache-Control": "no-cache" } }); if (data) return data; } catch {}
     try { const { data } = await api.get(`/api/v1/animals`, { params: { id }, headers: { "Cache-Control": "no-cache" } }); if (Array.isArray(data)) return data.find(a => a.id === id) || null; } catch {}
@@ -158,13 +169,16 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
     return null;
   }
 
-  /* ===== alteração de lote — PERSISTE via endpoint dedicado ===== */
+  /* ===== alteração de lote — persiste via endpoint dedicado ===== */
   async function mudarLote(animal, loteId, loteNome) {
+    // se ficou inativo em outra aba por algum motivo, não permitir mover
+    if (isInativo(animal)) return;
+
     const prev = extractLoteFrom(animal);
     const selected = loteId != null ? lotes.find((l) => l.id === loteId) : null;
     const nextNome = loteNome || selected?.nome || null;
 
-    // UI otimista: atualiza apenas o animal selecionado
+    // UI otimista
     setRows((prevRows) =>
       prevRows.map((r) =>
         r.id === animal.id
@@ -184,7 +198,7 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
     }
 
     if (!updated) {
-      // rollback se falhar
+      // rollback
       setRows((prevRows) =>
         prevRows.map((r) =>
           r.id === animal.id
@@ -196,22 +210,21 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
       return;
     }
 
-    // lê do backend para garantir chave certa
     const fresh = await fetchAnimalById(animal.id);
     const to = extractLoteFrom(fresh || updated);
 
-    // consolida linha com o que o backend realmente devolve
-    setRows((prevRows) =>
-      prevRows.map((r) =>
+    setRows((prevRows) => {
+      const merged = prevRows.map((r) =>
         r.id === animal.id
           ? { ...r, ...(fresh || updated), current_lote_id: to.id, current_lote_nome: to.nome }
           : r
-      )
-    );
+      );
+      // se o backend marcou como inativo por algum motivo, some daqui
+      return merged.filter(isAtivo);
+    });
 
     window.dispatchEvent(new Event("animaisAtualizados"));
     onAtualizado?.(fresh || updated);
-    // ⚠️ contagens se recalculam por `loteCounts`
   }
 
   return (
@@ -239,8 +252,10 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
             {visibleRows.map((v, idx) => {
               const prodTxt = v.situacao_produtiva || v.estado || "—";
               const loteRow = extractLoteFrom(v);
-              const dtPrevParto = calcPrevisaoParto(v); // <<<<<< Fallback pela IA aqui
-              const prevPartoStr = formatBR(dtPrevParto);
+              const dtPrev = calcPrevisaoParto(v);
+              const prevStr = formatBR(dtPrev);
+
+              const disabled = isInativo(v); // segurança dupla
 
               return (
                 <tr key={v.id ?? v.numero ?? v.brinco ?? idx} className={`${rowBase} ${rowAlt}`}>
@@ -251,8 +266,7 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
                   <td className={`${tdClamp} ${hoverTD(4, hoverCol)}`} title={v.categoria ?? "—"}>{v.categoria ?? "—"}</td>
                   <td className={`${tdClamp} ${hoverTD(5, hoverCol)}`} title={idadeTexto(v.nascimento)}>{idadeTexto(v.nascimento)}</td>
 
-                  {/* Previsão de parto com fallback por Última IA (+280) */}
-                  <td className={`${tdBase}  ${hoverTD(6, hoverCol)}`}>{prevPartoStr}</td>
+                  <td className={`${tdBase}  ${hoverTD(6, hoverCol)}`}>{prevStr}</td>
 
                   <td className={`${tdClamp} ${hoverTD(7, hoverCol)}`} title={prodTxt}>
                     {badge(prodTxt, prodTxt)}
@@ -266,6 +280,7 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
                       valueId={loteRow.id}
                       valueNome={loteRow.nome}
                       onChange={(id, nome) => mudarLote(v, id, nome)}
+                      disabled={disabled}
                     />
                   </td>
 
@@ -280,9 +295,10 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
                         <span className="hidden sm:inline">Ficha</span>
                       </button>
                       <button
-                        onClick={() => setEditAnimal(v)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-[#1e3a8a]/20 hover:border-[#1e3a8a] text-[#1e3a8a] hover:bg-[#1e3a8a]/5"
-                        title="Editar animal"
+                        onClick={() => !disabled && setEditAnimal(v)}
+                        disabled={disabled}
+                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md border ${disabled ? "opacity-40 cursor-not-allowed" : "border-[#1e3a8a]/20 hover:border-[#1e3a8a] text-[#1e3a8a] hover:bg-[#1e3a8a]/5"}`}
+                        title={disabled ? "Animal inativo" : "Editar animal"}
                       >
                         <Pencil size={16} />
                         <span className="hidden sm:inline">Editar</span>
@@ -302,7 +318,11 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
           animal={editAnimal}
           onFechar={() => setEditAnimal(null)}
           onSalvo={(updated) => {
-            setRows((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
+            // se virar inativo por algum motivo, removemos do plantel
+            setRows((prev) => {
+              const merged = prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r));
+              return merged.filter(isAtivo);
+            });
             setEditAnimal(null);
             window.dispatchEvent(new Event("animaisAtualizados"));
             onAtualizado?.(updated);
@@ -321,8 +341,8 @@ export default function Plantel({ animais = [], onAtualizado, onCountChange }) {
   );
 }
 
-/* ============ Lote Quick Select (pill + dropdown) ============ */
-function LoteQuickSelect({ lotes = [], counts = new Map(), valueId, valueNome, onChange }) {
+/* ============ Lote Quick Select ============ */
+function LoteQuickSelect({ lotes = [], counts = new Map(), valueId, valueNome, onChange, disabled }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -338,15 +358,16 @@ function LoteQuickSelect({ lotes = [], counts = new Map(), valueId, valueNome, o
   return (
     <div className="relative inline-block" ref={ref}>
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 px-3 h-[28px] rounded-full border border-[#1e3a8a] text-[#1e3a8a] bg-white hover:bg-[#eef3ff] hover:border-[#1e3a8a] transition"
-        title="Selecionar lote"
+        onClick={() => !disabled && setOpen((v) => !v)}
+        disabled={disabled}
+        className={`inline-flex items-center gap-2 px-3 h-[28px] rounded-full border text-[#1e3a8a] bg-white transition ${disabled ? "opacity-40 cursor-not-allowed border-gray-300" : "hover:bg-[#eef3ff] hover:border-[#1e3a8a] border-[#1e3a8a]"}`}
+        title={disabled ? "Animal inativo" : "Selecionar lote"}
       >
         <span className="font-semibold leading-none truncate max-w-[130px]">{label}</span>
         <ChevronDown size={16} />
       </button>
 
-      {open && (
+      {!disabled && open && (
         <div className="absolute z-20 mt-2 w-72 max-h-80 overflow-y-auto overflow-x-hidden bg-white rounded-md shadow-lg border">
           <div className="px-3 py-2 text-xs text-gray-500 border-b">Lotes ativos</div>
 
@@ -395,7 +416,7 @@ function LoteQuickSelect({ lotes = [], counts = new Map(), valueId, valueNome, o
   );
 }
 
-/* ===== Modal de edição (edição geral do animal) ===== */
+/* ===== Modal de edição ===== */
 function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
   const initial = {
     id: animal?.id,
@@ -469,7 +490,6 @@ function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
             n_lactacoes: toInt(dados.nLactacoes),
             ultima_ia: toStr(dados.ultimaIA),
             parto: ultimoPartoStr,
-            // Quando há último parto, limpamos previsão e IA (mantido do seu código)
             ...(ultimoPartoStr ? { previsao_parto: null, ultima_ia: null, categoria: "Lactante" } : {}),
           }
         : {}),
@@ -615,7 +635,7 @@ function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
   );
 }
 
-/* ===== estilos modal (edição) ===== */
+/* ===== estilos modal ===== */
 const overlay = { position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 };
 const modal = { background: "#fff", borderRadius: "1rem", width: "820px", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", fontFamily: "Poppins, sans-serif" };
 const header = { background: "#1e40af", color: "white", padding: "1rem 1.5rem", fontWeight: "bold", fontSize: "1.1rem", borderTopLeftRadius: "1rem", borderTopRightRadius: "1rem", textAlign: "center" };

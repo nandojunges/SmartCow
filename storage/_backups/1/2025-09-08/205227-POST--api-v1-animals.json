@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "ts": "2025-09-08T23:52:27.796Z",
+    "method": "POST",
+    "url": "/api/v1/animals",
+    "userId": "1"
+  },
+  "request": {
+    "numero": "6",
+    "brinco": "6",
+    "nascimento": "01/01/2020",
+    "raca": "Holandês",
+    "estado": "lactante",
+    "sexo": "femea",
+    "categoria": "Adulto(a)",
+    "situacao_produtiva": "lactante",
+    "situacao_reprodutiva": "inseminada",
+    "pai": "Bluff",
+    "pai_id": "",
+    "mae": "",
+    "n_lactacoes": 1,
+    "ultima_ia": "15/01/2025",
+    "parto": "01/01/2024",
+    "previsao_parto": "22/10/2025",
+    "historico": {
+      "inseminacoes": [],
+      "partos": [],
+      "secagens": []
+    }
+  },
+  "response": {
+    "id": "ffc5fe26-67fd-4951-94d3-69012ca5f8b8",
+    "owner_id": "1",
+    "numero": "6",
+    "brinco": "6",
+    "raca": "Holandês",
+    "estado": "lactante",
+    "sexo": "femea",
+    "categoria": "Adulto(a)",
+    "n_lactacoes": 1,
+    "pai": "Bluff",
+    "mae": "",
+    "nascimento": "01/01/2020",
+    "ultima_ia": "15/01/2025",
+    "parto": "01/01/2024",
+    "previsao_parto": "22/10/2025",
+    "historico": {
+      "partos": [],
+      "secagens": [],
+      "inseminacoes": []
+    },
+    "created_at": "2025-09-08T23:52:27.800Z",
+    "updated_at": "2025-09-08T23:52:27.888Z"
+  }
+}

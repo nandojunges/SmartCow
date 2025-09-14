@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "ts": "2025-09-10T00:53:03.340Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/pre-parto",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+    "data": "2025-09-09",
+    "detalhes": {
+      "dias_param": 21
+    }
+  },
+  "response": {
+    "id": "130b5445-dcba-4d4f-975c-70a8b4c29fe5",
+    "animal_id": "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+    "data": "2025-09-09T03:00:00.000Z",
+    "tipo": "PRE_PARTO",
+    "detalhes": {
+      "dias_param": 21
+    },
+    "resultado": null,
+    "protocolo_id": null,
+    "aplicacao_id": null,
+    "created_at": "2025-09-10T00:53:03.350Z",
+    "updated_at": "2025-09-10T00:53:03.350Z"
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "meta": {
+    "ts": "2025-09-12T01:00:34.374Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/decisoes/ultimas",
+    "userId": "1"
+  },
+  "request": {
+    "ids": [
+      "4cef0289-c730-406c-baa0-57db6503e2e1",
+      "103a9bb9-04b3-44fe-abfe-6db33b5152ea",
+      "85905ea4-e733-4a9b-90f1-10ba6b8bfdaf",
+      "6f0479c3-e9b2-43d4-9824-0eb125636e0e",
+      "ffc5fe26-67fd-4951-94d3-69012ca5f8b8",
+      "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+      "9923e45a-e62f-4021-b0c7-03862dd0f843",
+      "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+      "011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+      "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b"
+    ]
+  },
+  "response": {
+    "items": [
+      {
+        "animal_id": "4cef0289-c730-406c-baa0-57db6503e2e1",
+        "numero": "10",
+        "brinco": "10",
+        "decisao": null,
+        "origem": "animal",
+        "data": null,
+        "_explicit_clear": false
+      },
+      {
+        "animal_id": "103a9bb9-04b3-44fe-abfe-6db33b5152ea",
+        "numero": "9",
+        "brinco": "9",
+        "decisao": null,
+        "origem": "animal",
+        "data": "2025-09-11T03:00:00.000Z",
+        "_explicit_clear": true
+      },
+      {
+        "animal_id": "85905ea4-e733-4a9b-90f1-10ba6b8bfdaf",
+        "numero": "8",
+        "brinco": "8",
+        "decisao": null,
+        "origem": "animal",
+        "data": "2025-09-11T03:00:00.000Z",
+        "_explicit_clear": true
+      },
+      {
+        "animal_id": "6f0479c3-e9b2-43d4-9824-0eb125636e0e",
+        "numero": "7",
+        "brinco": "7",
+        "decisao": null,
+        "origem": "animal",
+        "data": null,
+        "_explicit_clear": false
+      },
+      {
+        "animal_id": "ffc5fe26-67fd-4951-94d3-69012ca5f8b8",
+        "numero": "6",
+        "brinco": "6",
+        "decisao": null,
+        "origem": "animal",
+        "data": "2025-09-11T03:00:00.000Z",
+        "_explicit_clear": true
+      },
+      {
+        "animal_id": "df843cb4-d8ef-49bb-a0e0-35a47913b558",
+        "numero": "5",
+        "brinco": "5",
+        "decisao": null,
+        "origem": "animal",
+        "data": "2025-09-07T03:00:00.000Z",
+        "_explicit_clear": true
+      },
+      {
+        "animal_id": "9923e45a-e62f-4021-b0c7-03862dd0f843",
+        "numero": "4",
+        "brinco": "4",
+        "decisao": null,
+        "origem": "animal",
+        "data": "2025-09-07T03:00:00.000Z",
+        "_explicit_clear": true
+      },
+      {
+        "animal_id": "524f7b23-8b0f-4839-9f65-d39649d19ac2",
+        "numero": "3",
+        "brinco": "3",
+        "decisao": null,
+        "origem": "animal",
+        "data": "2025-09-07T03:00:00.000Z",
+        "_explicit_clear": true
+      },
+      {
+        "animal_id": "011de35a-2957-4ab1-ad0e-eade7f2e3bf1",
+        "numero": "2",
+        "brinco": "2",
+        "decisao": null,
+        "origem": "animal",
+        "data": null,
+        "_explicit_clear": false
+      },
+      {
+        "animal_id": "a89b0f6b-85e6-45c3-9c4f-a0b109383b8b",
+        "numero": "1",
+        "brinco": "1",
+        "decisao": "IATF",
+        "origem": "evento",
+        "data": "2025-09-06T03:00:00.000Z",
+        "_explicit_clear": false
+      }
+    ]
+  }
+}

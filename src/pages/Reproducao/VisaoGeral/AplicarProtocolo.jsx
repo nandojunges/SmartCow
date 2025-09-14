@@ -1,6 +1,6 @@
 // Drawer: Aplicar Protocolo (com react-select)
-// - Campos: tipo, protocolo, data de início, hora do 1º evento, criar agenda por etapas
-// - Emite onSubmit({ kind:"PROTOCOLO", tipo, protocoloId, protocolo_id, dataInicio, horaInicio, criarAgenda })
+// Envia para o pai: onSubmit(payload)
+// payload final inclui: { animal_id, protocolo_id, data, tipo, etapas[], detalhes, parent_aplicacao_id }
 import { useEffect, useMemo, useState } from "react";
 import Select from "react-select";
 
@@ -11,8 +11,12 @@ const nowHM = () => {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 };
 
-// helper: extrai o identificador do protocolo (id/uuid/etc.)
+// extrai id genérico
 const getProtoId = (p) => p?.id ?? p?.uuid ?? p?.ID ?? p?.codigo ?? "";
+
+// id do animal (tenta várias chaves comuns)
+const getAnimalId = (a) =>
+  a?.id ?? a?.uuid ?? a?.animal_id ?? a?.cow_id ?? a?.ID ?? a?.codigo ?? "";
 
 // validação de data BR real (não só regex)
 function isValidBRDate(s) {
@@ -22,7 +26,14 @@ function isValidBRDate(s) {
   return d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd;
 }
 
-// soma dias a uma data BR e retorna BR
+// dd/mm/aaaa -> yyyy-mm-dd
+function brToISO(s) {
+  if (!isValidBRDate(s)) return null;
+  const [dd, mm, yyyy] = s.split("/").map(Number);
+  return `${yyyy}-${pad2(mm)}-${pad2(dd)}`;
+}
+
+// soma dias em data BR e devolve BR
 function addDaysBR(s, days) {
   if (!isValidBRDate(s)) return null;
   const [dd, mm, yyyy] = s.split("/").map(Number);
@@ -31,7 +42,17 @@ function addDaysBR(s, days) {
   return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
-// estilos básicos p/ alinhar com inputs nativos e garantir z-index do menu
+// soma dias a uma data ISO (yyyy-mm-dd) e devolve ISO
+function addDaysISOFromISO(iso, days) {
+  const m = /^\d{4}-\d{2}-\d{2}$/.exec(String(iso || ""));
+  if (!m) return null;
+  const d = new Date(`${iso}T00:00:00`);
+  if (isNaN(d)) return null;
+  d.setDate(d.getDate() + Number(days || 0));
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+// estilos p/ react-select
 const selectStyles = {
   control: (base, state) => ({
     ...base,
@@ -86,30 +107,15 @@ export default function AplicarProtocolo({
   );
 
   function validar() {
+    const aId = getAnimalId(animal);
+    if (!aId) return "Animal inválido (sem identificador).";
     if (!protId) return "Escolha um protocolo.";
     if (!isValidBRDate(dataInicio)) return "Data inválida (use dd/mm/aaaa).";
     if (!/^\d{2}:\d{2}$/.test(horaInicio)) return "Hora inválida (use HH:mm).";
     return "";
   }
 
-  const submit = () => {
-    const e = validar();
-    if (e) {
-      setErro(e);
-      return;
-    }
-    onSubmit?.({
-      kind: "PROTOCOLO",
-      tipo,
-      protocoloId: protId,   // camelCase (mantido p/ compat)
-      protocolo_id: protId,  // snake_case (facilita chamar o backend)
-      dataInicio,            // dd/mm/aaaa
-      horaInicio,            // HH:mm
-      criarAgenda,           // bool -> gerar tarefas no calendário
-    });
-  };
-
-  // ajuda visual sobre o que será agendado
+  // resumo das etapas (visual)
   const etapasResumo = useMemo(() => {
     const ets = Array.isArray(protSel?.etapas) ? protSel.etapas : [];
     return ets.map((et, i) => {
@@ -127,7 +133,7 @@ export default function AplicarProtocolo({
     });
   }, [protSel, horaInicio, dataInicio]);
 
-  // opções para react-select (Protocolo)
+  // opções p/ select
   const protocoloOptions = useMemo(
     () => opcoes.map((p) => ({ value: getProtoId(p), label: p.nome })),
     [opcoes]
@@ -141,6 +147,63 @@ export default function AplicarProtocolo({
     () => protocoloOptions.find((o) => o.value === protId) || null,
     [protocoloOptions, protId]
   );
+
+  const montarEtapasPayload = (dataBaseISO) => {
+    const ets = Array.isArray(protSel?.etapas) ? protSel.etapas : [];
+    if (!criarAgenda || ets.length === 0) return [];
+
+    return ets.map((et, i) => {
+      const offset = Number.isFinite(+et?.dia) ? +et.dia : i === 0 ? 0 : i;
+      const dataISO = addDaysISOFromISO(dataBaseISO, offset) || dataBaseISO;
+
+      // Repasse os campos comuns; backend vai guardar em "detalhes"
+      const etapaDetalhes = {
+        dia: offset,
+        descricao: et?.descricao ?? null,
+        acao: et?.acao ?? null,
+        hormonio: et?.hormonio ?? null,
+        dose: et?.dose ?? null,
+        via: et?.via ?? null,
+        obs: et?.obs ?? null,
+        hora: et?.hora || horaInicio,
+      };
+
+      return {
+        data: dataISO,       // deixa já calculado para cada etapa
+        ...etapaDetalhes,    // merge: backend junta isso em detalhes
+      };
+    });
+  };
+
+  const submit = () => {
+    const e = validar();
+    if (e) {
+      setErro(e);
+      return;
+    }
+
+    const aId = String(getAnimalId(animal));
+    const dataISO = brToISO(dataInicio) || dataInicio; // backend aceita BR/ISO
+    const etapas = montarEtapasPayload(dataISO);
+
+    // payload final — compat com pai e com backend
+    const payload = {
+      kind: "PROTOCOLO",            // compat (pai pode olhar isso)
+      animal_id: aId,               // requerido no backend
+      protocolo_id: protId,         // requerido no backend
+      tipo,                         // opcional (usado como metadado)
+      data: dataISO,                // data base (dd/mm/aaaa ou yyyy-mm-dd)
+      etapas,                       // etapas (cada uma com sua data e detalhes)
+      detalhes: {},                 // espaço p/ metadados extras
+      parent_aplicacao_id: null,    // se for reaplicação, pode setar aqui
+      // campos auxiliares usados só no front (não atrapalham no backend):
+      dataInicio,                   // BR, útil p/ UI
+      horaInicio,                   // HH:mm, já embutido nas etapas
+      criarAgenda,                  // bool — o backend ignora
+    };
+
+    onSubmit?.(payload);
+  };
 
   return (
     <div className="grid grid-cols-3 gap-3">
@@ -220,7 +283,10 @@ export default function AplicarProtocolo({
             <ul className="list-disc pl-5">
               {etapasResumo.map((et) => (
                 <li key={et.idx}>
-                  {et.descricao} — {et.dataPrevista ? `${et.dataPrevista} às ${et.hora}` : `offset ${et.offset}d • ${et.hora}`}
+                  {et.descricao} —{" "}
+                  {et.dataPrevista
+                    ? `${et.dataPrevista} às ${et.hora}`
+                    : `offset ${et.offset}d • ${et.hora}`}
                 </li>
               ))}
             </ul>

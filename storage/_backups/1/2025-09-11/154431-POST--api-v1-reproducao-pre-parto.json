@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "ts": "2025-09-11T18:44:31.976Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/pre-parto",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "103a9bb9-04b3-44fe-abfe-6db33b5152ea",
+    "data": "2025-09-11",
+    "detalhes": {
+      "dias_param": 25
+    }
+  },
+  "response": {
+    "id": "84af5878-73a5-4310-87f5-a806a5f26d85",
+    "data": "2025-09-11T03:00:00.000Z"
+  }
+}

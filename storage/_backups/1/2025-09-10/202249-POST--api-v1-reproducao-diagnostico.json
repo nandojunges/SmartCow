@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "ts": "2025-09-10T23:22:49.275Z",
+    "method": "POST",
+    "url": "/api/v1/reproducao/diagnostico",
+    "userId": "1"
+  },
+  "request": {
+    "animal_id": "85905ea4-e733-4a9b-90f1-10ba6b8bfdaf",
+    "data": "2025-02-15",
+    "tipo": "DIAGNOSTICO",
+    "resultado": "prenhe",
+    "detalhes": {
+      "tipoExame": "DG 30d",
+      "diasDesdeIA": 31,
+      "comentario": ""
+    }
+  },
+  "response": {
+    "error": "Sem IA anterior para parear."
+  }
+}

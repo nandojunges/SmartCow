@@ -1,7 +1,7 @@
 // src/pages/Animais/Secagem.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Select from "react-select";
-import api, { getAnimais, atualizarAnimal } from "../../api";
+import api, { getAnimais } from "../../api";
 
 export const iconeSecagem = "/icones/secagem.png";
 export const rotuloSecagem = "Secagem";
@@ -14,7 +14,64 @@ const ANTEC_PADRAO  = 60;
 const MARGEM_ALERTA = 5;
 const STICKY_OFFSET = 48;
 
-// ====== Settings (fallback local) ======
+/* ===================== Datas/util ===================== */
+const DAY = 86400000;
+
+// Parser robusto igual ao usado no Pré-parto
+function parseDate(any) {
+  if (!any) return null;
+  if (any instanceof Date && Number.isFinite(any.getTime())) return any;
+
+  if (typeof any === "number") {
+    const ms = any > 1e12 ? any : any * 1000;
+    const d = new Date(ms);
+    return Number.isFinite(d.getTime()) ? d : null;
+  }
+
+  if (typeof any === "string") {
+    const s = any.trim();
+
+    // dd/mm/aaaa
+    const mBR = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+    if (mBR) {
+      const dd = Number(mBR[1]); const mm = Number(mBR[2]); const yyyy = Number(mBR[3]);
+      const d = new Date(yyyy, mm - 1, dd);
+      return Number.isFinite(d.getTime()) ? d : null;
+    }
+
+    // yyyy-mm-dd ou ISO completo
+    const d2 = new Date(s);
+    return Number.isFinite(d2.getTime()) ? d2 : null;
+  }
+
+  return null;
+}
+function toISODateLocal(dt) {
+  const d = parseDate(dt);
+  if (!d) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+function formatBR(dt){ return dt ? dt.toLocaleDateString("pt-BR") : "—"; }
+function addDays(dt, n){ const d = new Date(parseDate(dt).getTime()); d.setDate(d.getDate()+n); return d; }
+function subDays(dt, n){ const d = new Date(parseDate(dt).getTime()); d.setDate(d.getDate()-n); return d; }
+function idadeTexto(nasc){
+  const dt = parseDate(nasc); if (!dt) return "—";
+  const meses = Math.max(0, Math.floor((Date.now()-dt.getTime())/(1000*60*60*24*30.44)));
+  return `${Math.floor(meses/12)}a ${meses%12}m`;
+}
+function diasDesde(val){
+  const dt = parseDate(val); if (!dt) return "—";
+  return String(Math.max(0, Math.round((Date.now()-dt.getTime())/DAY)));
+}
+const fmtDigitDate = (v) => {
+  const s = String(v || "").replace(/\D/g, "").slice(0, 8);
+  return [s.slice(0,2), s.slice(2,4), s.slice(4,8)].filter(Boolean).join("/");
+};
+
+/* ===================== Settings (fallback local) ===================== */
 const SETTINGS_FLAG = "SETTINGS:API:DISABLED";
 const isSettingsApiDisabled = () =>
   window.__SETTINGS_API_DISABLED__ === true ||
@@ -46,35 +103,6 @@ async function setSetting(key, value) {
   try { localStorage.setItem(`SETTINGS:${key}`, JSON.stringify(value)); } catch {}
 }
 
-/* ===================== Datas/util ===================== */
-const DAY = 86400000;
-function parseBR(str) {
-  if (!str || str.length !== 10) return null;
-  const [d,m,y] = str.split("/").map(Number);
-  const dt = new Date(y, m - 1, d);
-  return Number.isFinite(dt.getTime()) ? dt : null;
-}
-function formatBR(dt){ return dt ? dt.toLocaleDateString("pt-BR") : "—"; }
-function addDays(dt, n){ const d = new Date(dt.getTime()); d.setDate(d.getDate()+n); return d; }
-function subDays(dt, n){ const d = new Date(dt.getTime()); d.setDate(d.getDate()-n); return d; }
-function idadeTexto(nasc){
-  const dt = parseBR(nasc); if (!dt) return "—";
-  const meses = Math.max(0, Math.floor((Date.now()-dt.getTime())/(1000*60*60*24*30.44)));
-  return `${Math.floor(meses/12)}a ${meses%12}m`;
-}
-function diasDesde(brDate){
-  const dt = parseBR(brDate); if (!dt) return "—";
-  return String(Math.max(0, Math.round((Date.now()-dt.getTime())/DAY)));
-}
-function calcPrevisaoParto({ previsao_parto, ultima_ia }){
-  const pp = parseBR(previsao_parto); if (pp) return pp;
-  const ia = parseBR(ultima_ia); return ia ? addDays(ia, 280) : null;
-}
-const fmtDigitDate = (v) => {
-  const s = String(v || "").replace(/\D/g, "").slice(0, 8);
-  return [s.slice(0,2), s.slice(2,4), s.slice(4,8)].filter(Boolean).join("/");
-};
-
 /* ===================== Estilos ===================== */
 const tableClasses = "w-full border-separate [border-spacing:0_4px] text-[14px] text-[#333] table-auto";
 const thBase = "bg-[#e6f0ff] px-3 py-3 text-left font-bold text-[16px] text-[#1e3a8a] border-b-2 border-[#a8c3e6] sticky z-10 whitespace-nowrap cursor-pointer";
@@ -86,7 +114,7 @@ const bgHL = "bg-[rgba(33,150,243,0.08)]";
 const ringCell = "relative z-[1] ring-1 ring-[#1e3a8a]/30 shadow-sm scale-[1.01]";
 
 /* ================== Modal Secagem ================== */
-function ModalSecagem({ animal, onClose, onSaved }) {
+function ModalSecagem({ animal, antec, onClose, onSaved }) {
   const [data, setData] = useState("");
   const [plano, setPlano] = useState(null);
   const [medicamento, setMedicamento] = useState(null);
@@ -125,39 +153,57 @@ function ModalSecagem({ animal, onClose, onSaved }) {
 
   const selectStyles = { container: (b) => ({ ...b, marginTop: 6 }), menuPortal: (b) => ({ ...b, zIndex: 99999 }) };
 
+  // Pré-preencher data com a PREVISÃO DE SECAGEM quando existir
+  useEffect(() => {
+    const prevISO = animal?._secagemPrev;
+    const dt = parseDate(prevISO);
+    if (dt) setData(dt.toLocaleDateString("pt-BR"));
+  }, [animal]);
+
+  // Preview: diferença até o parto, se tiver previsao_parto / previsaoParto
+  const previewDiasAntesParto = useMemo(() => {
+    try {
+      const dt = parseDate(data);
+      const pp =
+        parseDate(animal?.previsao_parto) ||
+        parseDate(animal?.previsaoParto) ||
+        parseDate(animal?.previsaoPartoISO);
+      if (!dt || !pp) return null;
+      return Math.round((pp.getTime() - dt.getTime()) / DAY);
+    } catch { return null; }
+  }, [data, animal?.previsao_parto, animal?.previsaoParto, animal?.previsaoPartoISO]);
+
   const salvar = async () => {
     if (!data || !plano?.value) { setErro("Preencha Data e Plano."); return; }
+    const dt = parseDate(data);
+    if (!dt) { setErro("Data inválida (use dd/mm/aaaa)."); return; }
+
     setErro(""); setSaving(true);
     try {
-      // monta timeline de secagem
-      const historico = animal?.historico && typeof animal.historico === "object" ? animal.historico : {};
-      const secagens = Array.isArray(historico.secagens) ? [...historico.secagens] : [];
-      secagens.push({
-        data,
+      const dataISO = toISODateLocal(dt);
+
+      const detalhes = {
         plano: plano.value,
-        responsavel: responsavel?.label || undefined,
-        observacoes: observacoes || undefined,
-        medicamento: {
-          id: medicamento?.value || undefined,
-          nomeComercial: medicamento?.label || undefined,
-          principioAtivo: principioAtivo || undefined,
-          carenciaLeite: carenciaLeite || undefined,
-          carenciaCarne: carenciaCarne || undefined,
-        },
-        created_at: new Date().toISOString(),
-      });
-      const novoHistorico = { ...historico, secagens };
+        medicamento: medicamento?.value || undefined,
+        responsavel: responsavel?.value || undefined,
+        principio_ativo: principioAtivo || undefined,
+        carencia_leite: carenciaLeite || undefined,
+        carencia_carne: carenciaCarne || undefined,
+        obs: observacoes || undefined,
+        antec: Number.isFinite(+antec) ? +antec : undefined,
+      };
 
-      // ⛔️ NÃO mexe em previsao_parto / ultima_ia / situacao_reprodutiva.
-      // ✅ Apenas marca situação PRODUTIVA como "seca" (e mantém compatibilidade com `estado`).
-      await atualizarAnimal(animal.id, {
-        historico: novoHistorico,
-        situacao_produtiva: "seca",
-        estado: "seca",
+      await api.post("/api/v1/reproducao/secagem", {
+        animal_id: animal.id,
+        data: dataISO,
+        detalhes,
       });
 
-      onSaved?.(); onClose?.();
+      onSaved?.();
+      onClose?.();
+
       window.dispatchEvent(new Event("animaisAtualizados"));
+      window.dispatchEvent(new Event("atualizarCalendario"));
     } catch (e) {
       console.error("Erro ao salvar secagem:", e);
       alert("❌ Erro ao salvar secagem.");
@@ -183,6 +229,11 @@ function ModalSecagem({ animal, onClose, onSaved }) {
                 placeholder="dd/mm/aaaa"
                 className="w-full px-3 py-2 rounded border border-gray-300"
               />
+              <div className="text-xs text-gray-600 mt-1">
+                {previewDiasAntesParto != null
+                  ? <>≈ <strong>{previewDiasAntesParto}</strong> dias antes do parto</>
+                  : <>Preencha a data para ver o intervalo até o parto.</>}
+              </div>
             </div>
             <div>
               <label className="font-medium">Plano *</label>
@@ -326,18 +377,73 @@ export default function Secagem({ animais = [], onCountChange }) {
     }
   }, [janelaRaw, janela]);
 
-  /* 3) Carrega lista do servidor (pega o plantel e filtramos localmente) */
+  /* 3) Carrega lista a partir do feed de calendário (SECAGEM_PREVISTA) */
   const fetchLista = useCallback(async () => {
     if (janela == null) return;
     setLoading(true); setErro("");
     try {
+      const hoje = new Date();
+      const startISO = toISODateLocal(subDays(hoje, MARGEM_ALERTA));
+      const endISO = toISODateLocal(addDays(hoje, janela));
+
+      const { data: calData } = await api.get("/api/v1/reproducao/calendario", { params: { start: startISO, end: endISO } });
+
+      const itens = Array.isArray(calData?.itens) ? calData.itens : [];
+      const feed = itens.filter((it) => {
+        // aceita várias grafias de tipo: "SECAGEM_PREVISTA", "secagem_prevista", "SECAGEM", etc.
+        const tipo = String(it?.tipo || it?.evento || it?.kind || "")
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .toUpperCase();
+        return tipo.includes("SECAGEM"); // basta conter SECAGEM
+      });
+
+      // pega a data do evento (aceita vários campos e formatos)
+      const normData = (it) => {
+        const cand =
+          it?.data ?? it?.start ?? it?.inicio ?? it?.date ?? it?.data_inicio ?? it?.dataISO ?? it?.start_date ?? null;
+        return toISODateLocal(parseDate(cand)); // guarda ISO yyyy-mm-dd
+      };
+
+      // id do animal (aceita várias chaves)
+      const normId = (it) => String(
+        it?.animal_id ?? it?.animalId ?? it?.id_animal ?? it?.animal?.id ?? it?.dados?.animal_id ?? ""
+      );
+
+      const ids = [];
+      const mapa = new Map();
+      for (const it of feed) {
+        const id = normId(it);
+        const iso = normData(it);
+        if (!id || !iso) continue;
+        ids.push(id);
+        mapa.set(id, { ...it, _iso: iso });
+      }
+
       const { items } = await getAnimais({ view: "plantel", page: 1, limit: 2000 });
-      setLista(items || []);
+
+      const base = (items || [])
+        .filter((a) => ids.includes(String(a.id)))
+        .map((a) => {
+          const ci = mapa.get(String(a.id));
+          return {
+            ...a,
+            // data prevista de secagem (ISO)
+            _secagemPrev: ci?._iso || null,
+            // deixe acessível a previsão de parto em múltiplas chaves para o preview
+            previsao_parto: a?.previsao_parto ?? a?.previsaoParto ?? a?.previsaoPartoISO ?? null,
+            previsaoParto:  a?.previsaoParto  ?? a?.previsao_parto ?? a?.previsaoPartoISO ?? null,
+            previsaoPartoISO: a?.previsaoPartoISO ?? null,
+          };
+        });
+
+      setLista(base);
     } catch (e) {
       console.error("Erro ao carregar secagem:", e);
       setErro("Não foi possível carregar do servidor. Mostrando dados locais.");
       setLista(Array.isArray(animais) ? animais : []);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }, [janela, animais]);
 
   useEffect(() => { fetchLista(); }, [fetchLista]);
@@ -350,26 +456,32 @@ export default function Secagem({ animais = [], onCountChange }) {
   // ===== helpers de estado/visibilidade =====
   const hoje = new Date();
 
+  const getSitProd = (v) =>
+    String(v?.situacao_produtiva ?? v?.situacaoProdutiva ?? v?.sit_produtiva ?? v?.estado ?? "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
   const isJaSeca = (v) => {
-    if (String(v?.situacao_produtiva || v?.estado || "").toLowerCase() === "seca") return true;
+    const sp = getSitProd(v);
+    if (sp.includes("seca")) return true;
     const sec = v?.historico?.secagens;
     return Array.isArray(sec) && sec.length > 0;
   };
   const ehLactanteOuVaca = (v) => {
-    const estado = String(v?.situacao_produtiva || v?.estado || "").toLowerCase();
-    if (estado === "lactante" || estado === "lactacao" || estado === "lactando") return true;
+    const sp = getSitProd(v);
+    if (sp.includes("seca")) return false;           // já seca não deve aparecer
+    if (sp.includes("lact")) return true;            // lactante/lactacao
     const categoria = String(v?.categoria || "").toLowerCase();
     if (categoria.includes("vaca")) return true;
-    const dtParto = parseBR(v?.parto);
+    const dtParto = parseDate(v?.parto);
     if (dtParto && dtParto < hoje) return true;
     return false;
   };
 
   function classificarPorJanela(v, J, A) {
-    const pp = calcPrevisaoParto({ previsao_parto: v.previsao_parto, ultima_ia: v.ultima_ia });
-    if (!pp) return { bucket: 3, diasAteSec: Infinity, pp, prevSec: null };
-    const prevSec = subDays(pp, A);
+    const prevSec = parseDate(v._secagemPrev);
+    if (!prevSec) return { bucket: 3, diasAteSec: Infinity, pp: null, prevSec: null };
     const diasAteSec = Math.floor((prevSec.getTime() - hoje.getTime()) / DAY);
+    const pp = addDays(prevSec, A);
     if (diasAteSec < -MARGEM_ALERTA) return { bucket: 0, diasAteSec, pp, prevSec }; // atrasada
     if (diasAteSec <= J)             return { bucket: 1, diasAteSec, pp, prevSec }; // dentro da janela
     return { bucket: 2, diasAteSec, pp, prevSec };                                   // antecipada
@@ -422,7 +534,7 @@ export default function Secagem({ animais = [], onCountChange }) {
               if (e.key === "Enter")  { e.preventDefault(); commitJanela(); e.currentTarget.blur(); }
               if (e.key === "Escape") { e.preventDefault(); setJanelaRaw(String(janela ?? JANELA_PADRAO)); e.currentTarget.blur(); }
             }}
-            className="w-24 px-3 py-2 rounded-md border border-[#1e3a8c] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+            className="w-24 px-3 py-2 rounded-md border border-[#1e3a8a] focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
           />
           <span className="text-sm text-gray-600">dias</span>
 
@@ -554,8 +666,12 @@ export default function Secagem({ animais = [], onCountChange }) {
         {modalAnimal && (
           <ModalSecagem
             animal={modalAnimal}
+            antec={antec}
             onClose={() => setModalAnimal(null)}
-            onSaved={() => setModalAnimal(null)}
+            onSaved={() => {
+              setModalAnimal(null);
+              fetchLista();
+            }}
           />
         )}
       </div>

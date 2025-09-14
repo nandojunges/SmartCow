@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "ts": "2025-09-11T17:47:36.681Z",
+    "method": "PUT",
+    "url": "/api/v1/animals/103a9bb9-04b3-44fe-abfe-6db33b5152ea",
+    "userId": "1"
+  },
+  "request": {
+    "numero": "9",
+    "brinco": "9",
+    "nascimento": "01/01/2020",
+    "sexo": "femea",
+    "raca": "Holandês",
+    "categoria": "Vaca",
+    "situacao_produtiva": "lactante",
+    "n_lactacoes": 0,
+    "ultima_ia": "15/01/2025"
+  },
+  "response": {
+    "id": "103a9bb9-04b3-44fe-abfe-6db33b5152ea",
+    "owner_id": "1",
+    "numero": "9",
+    "brinco": "9",
+    "raca": "Holandês",
+    "estado": "lactante",
+    "sexo": "femea",
+    "categoria": "Vaca",
+    "n_lactacoes": 0,
+    "pai": null,
+    "mae": null,
+    "nascimento": "01/01/2020",
+    "ultima_ia": "15/01/2025",
+    "parto": null,
+    "previsao_parto": null,
+    "historico": null,
+    "created_at": "2025-09-11T17:47:15.573Z",
+    "updated_at": "2025-09-11T17:47:15.664Z"
+  }
+}
