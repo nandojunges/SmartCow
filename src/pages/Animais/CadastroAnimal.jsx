@@ -229,8 +229,9 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
       previsao_parto: prevPartoBR || "",
       previsao_parto_iso: prevPartoISO || undefined,
 
-      // histórico estruturado (mantemos null por simplicidade)
-      historico: null,
+      // não enviar 'historico' vazio; backend só aceita se houver coluna
+      // (se precisar, preencha algo real aqui e deixe o backend decidir)
+      // historico: { meta: {} },
     };
     return payload;
   };
