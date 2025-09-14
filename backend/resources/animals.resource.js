@@ -236,11 +236,14 @@ router.use((req, res, next) => {
       if (LOTE_NOME_COL) clean[LOTE_NOME_COL] = lote_nome_in;
       delete clean.lote_id; delete clean.lote_nome; delete clean.grupo_id; delete clean.grupo_nome;
     } else {
-      const hist = (typeof clean.historico === 'object' && clean.historico) ? clean.historico : (safeJSON(clean.historico) || {});
-      clean.historico = {
-        ...(hist || {}),
-        lote: { ...(hist?.lote || {}), id: lote_id_in ?? null, nome: lote_nome_in ?? null, updated_at: new Date().toISOString() },
-      };
+      // só persiste em historico se a coluna existir
+      if (hasCol('historico')) {
+        const hist = (typeof clean.historico === 'object' && clean.historico) ? clean.historico : (safeJSON(clean.historico) || {});
+        clean.historico = {
+          ...(hist || {}),
+          lote: { ...(hist?.lote || {}), id: lote_id_in ?? null, nome: lote_nome_in ?? null, updated_at: new Date().toISOString() },
+        };
+      }
       delete clean.lote_id; delete clean.lote_nome; delete clean.grupo_id; delete clean.grupo_nome;
     }
   }
@@ -250,16 +253,18 @@ router.use((req, res, next) => {
 
   // 5) origem/valor_compra: mantém em colunas se existirem; se não, guarda em historico.origem
   if (!hasCol('origem') || !hasCol('valor_compra')) {
-    const hist = (typeof clean.historico === 'object' && clean.historico) ? clean.historico : (safeJSON(clean.historico) || {});
-    if (clean.origem != null || clean.valor_compra != null) {
-      const valorNum = parseCurrencyBRL(clean.valor_compra);
-      hist.origem = {
-        tipo: clean.origem ?? hist?.origem?.tipo ?? null,
-        valor_compra: valorNum ?? hist?.origem?.valor_compra ?? null,
-        at: new Date().toISOString(),
-      };
+    if (hasCol('historico')) {
+      const hist = (typeof clean.historico === 'object' && clean.historico) ? clean.historico : (safeJSON(clean.historico) || {});
+      if (clean.origem != null || clean.valor_compra != null) {
+        const valorNum = parseCurrencyBRL(clean.valor_compra);
+        hist.origem = {
+          tipo: clean.origem ?? hist?.origem?.tipo ?? null,
+          valor_compra: valorNum ?? hist?.origem?.valor_compra ?? null,
+          at: new Date().toISOString(),
+        };
+      }
+      clean.historico = hist;
     }
-    clean.historico = hist;
     if (!hasCol('origem')) delete clean.origem;
     if (!hasCol('valor_compra')) delete clean.valor_compra;
   } else {
@@ -295,7 +300,9 @@ router.use((req, res, next) => {
   // 6) mantém apenas colunas válidas (historico é livre)
   const finalClean = {};
   for (const [k, v] of Object.entries(clean)) {
-    if (k === 'historico' || hasCol(k)) finalClean[k] = v;
+    if (hasCol(k) || (k === 'historico' && hasCol('historico'))) {
+      finalClean[k] = v;
+    }
   }
 
   // 6.1) injeta owner_id no POST quando a tabela possui owner e o usuário está autenticado
@@ -316,7 +323,8 @@ router.use((req, res, next) => {
         presentesNoBody: Object.keys(bIn),
         aceitosAntesDeFiltrar: Object.keys(bAllowed),
         colunasDaTabela: Array.from(COLS),
-        lembrete: 'Os campos precisam existir como coluna OU entrar em `historico`.'
+        historicoSuportado: hasCol('historico'),
+        lembrete: 'Os campos precisam existir como coluna; `historico` só é aceito se houver coluna `historico`.'
       }
     });
   }
