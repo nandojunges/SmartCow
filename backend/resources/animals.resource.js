@@ -354,6 +354,80 @@ router.use((req, res, next) => {
   next();
 });
 
+/* ===== CREATE manual (desvia do crudRouter p/ evitar validação rígida) ===== */
+router.post('/', async (req, res) => {
+  try {
+    // se a tabela tiver owner_id, exigir usuário
+    const uid = extractUserId(req);
+    if (HAS_OWNER && !uid) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // aqui o body já passou na sanitização acima
+    const body = req.body || {};
+    const keys = Object.keys(body).filter((k) => COLS.has(k));
+
+    if (!keys.length) {
+      return res.status(400).json({
+        error: 'ValidationError',
+        message: 'Nenhum campo válido para inserir (após sanitização).',
+        tips: {
+          bodyKeys: Object.keys(req.body || {}),
+          columns: Array.from(COLS),
+        },
+      });
+    }
+
+    // monta INSERT dinâmico
+    const cols = [];
+    const ph   = [];
+    const vals = [];
+    let i = 0;
+
+    for (const k of keys) {
+      cols.push(`"${k}"`);
+      ph.push(`$${++i}`);
+      vals.push(body[k]);
+    }
+
+    // garante owner_id (se aplicável) — caso a sanitização anterior não tenha injetado
+    if (HAS_OWNER && !('owner_id' in body)) {
+      cols.push('"owner_id"');
+      ph.push(`$${++i}`);
+      vals.push(uid);
+    }
+
+    // timestamps automáticos
+    if (COLS.has('created_at') && !('created_at' in body)) {
+      cols.push('"created_at"');
+      ph.push('NOW()');
+    }
+    if (COLS.has('updated_at') && !('updated_at' in body)) {
+      cols.push('"updated_at"');
+      ph.push('NOW()');
+    }
+
+    const returning = (function () {
+      // tenta retornar um conjunto útil de colunas
+      const base = ['id', 'numero', 'brinco', 'nascimento', 'sexo', 'raca', 'categoria', 'situacao_produtiva', 'situacao_reprodutiva', 'created_at', 'updated_at']
+        .filter((c) => COLS.has(c));
+      return base.length ? base.map((c) => `"${c}"`).join(', ') : '*';
+    })();
+
+    const sql = `
+      INSERT INTO "${TABLE}" (${cols.join(', ')})
+      VALUES (${ph.join(', ')})
+      RETURNING ${returning};
+    `;
+
+    const { rows } = await db.query(sql, vals);
+    return res.status(201).json(rows[0] || {});
+  } catch (e) {
+    console.error('[animals.create] erro:', e?.message, e?.stack);
+    return res.status(500).json({ error: 'InternalError', detail: e?.message || 'unknown' });
+  }
+});
+
 /* ===== Helpers de lote ===== */
 function materializeLote(row) {
   if (!row || typeof row !== 'object') return { lote_id: null, lote_nome: null, source: 'none' };
