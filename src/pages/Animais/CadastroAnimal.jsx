@@ -198,42 +198,38 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
   };
 
   const montarPayload = () => {
-    // estado compatível com telas antigas
-    let estadoCompat = "vazia";
-    if (sitProd === "lactante") estadoCompat = "lactante";
-    else if (sitProd === "seca") estadoCompat = "seca";
-
-    // força vazia p/ fêmea < 12m
-    const reprodFinal = (sexo === "femea" && mesesIdade < 12) ? "vazia" : (sitReprod || "vazia");
-
-    const payload = {
-      // identificação
-      numero, brinco, nascimento, raca, sexo, categoria,
-
-      // estados
-      estado: estadoCompat,
-      situacao_produtiva: sitProd || undefined,
-      situacao_reprodutiva: reprodFinal || undefined,
-
-      // origem/financeiro (backend pode ignorar se não existir coluna)
-      origem: origem || "propriedade",
-      valor_compra: valorCompra || "",
-
-      // genealogia + avançados
-      pai: pai || "",
-      mae: mae || "",
-      n_lactacoes: Number(nLactacoes || 0),
-      ultima_ia: ultimaIA || "",
-      ultimo_parto: ultimoParto || "",
-      parto: ultimoParto || "",
-      previsao_parto: prevPartoBR || "",
-      previsao_parto_iso: prevPartoISO || undefined,
-
-      // não enviar 'historico' vazio; backend só aceita se houver coluna
-      // (se precisar, preencha algo real aqui e deixe o backend decidir)
-      // historico: { meta: {} },
+    // 🧹 Payload mínimo/compatível para passar no sanitizer mesmo em schemas reduzidos.
+    // Se a sua tabela tiver mais colunas, o backend aceita igual.
+    const base = {
+      numero: numero || undefined,
+      brinco: brinco || undefined,
+      nascimento: nascimento || undefined, // dd/mm/aaaa (backend normaliza se houver coluna)
+      sexo: sexo || undefined,
+      raca: raca || undefined,
+      categoria: categoria || undefined,
     };
-    return payload;
+
+    // Produtiva/Reprodutiva só se existirem (evita 400 quando schema é minimalista)
+    if (sitProd) base.situacao_produtiva = sitProd;
+
+    const reprodFinal = (sexo === "femea" && mesesIdade < 12) ? "vazia" : (sitReprod || "");
+    if (reprodFinal) base.situacao_reprodutiva = reprodFinal;
+
+    // Avançados: só envia se preenchidos
+    if (pai) base.pai = pai;
+    if (mae) base.mae = mae;
+    if (nLactacoes) base.n_lactacoes = Number(nLactacoes || 0);
+    if (ultimaIA) base.ultima_ia = ultimaIA;
+    if (ultimoParto) { base.ultimo_parto = ultimoParto; base.parto = ultimoParto; }
+    if (prevPartoBR) base.previsao_parto = prevPartoBR;
+    if (prevPartoISO) base.previsao_parto_iso = prevPartoISO;
+
+    // Origem/financeiro: só envia se campo foi mexido (o backend joga em historico se não existir coluna)
+    if (origem !== "propriedade") base.origem = origem;
+    if (valorCompra) base.valor_compra = valorCompra;
+
+    // ⚠️ NÃO enviar 'estado' nem 'historico' do front (reduz chance de 400 quando schema é simples)
+    return base;
   };
 
   const salvar = async ({ eNovo = false } = {}) => {
@@ -258,7 +254,7 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
           tips: err?.response?.data?.tips,
         };
         console.error("⛔ criarAnimal falhou", dbg);
-        console.log("↩️ backend data:", err?.response?.data);
+        console.dir(err?.response?.data, { depth: null });
         setDetalhesErro(dbg);
         throw err;
       });
@@ -272,6 +268,12 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
 
       if (eNovo) limparForm();
     } catch (err) {
+      // Mostra a resposta do backend inteira (com tips se houver)
+      if (err?.response?.data) {
+        console.group("↩️ Backend /animals 400");
+        console.dir(err.response.data, { depth: null });
+        console.groupEnd();
+      }
       const msg = err?.response?.data?.message || "❌ Erro no cadastro. Verifique os campos.";
       setMensagemErro(msg);
       setTimeout(() => setMensagemErro(""), 3500);
