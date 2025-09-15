@@ -270,7 +270,7 @@ router.use((req, res, next) => {
   // 4) normaliza datas BR -> ISO para colunas existentes
   clean = normalizeDatesToISO(clean);
 
-  // 5) origem/valor_compra: mantém em colunas se existirem; se não, guarda em historico.origem
+  // 5) origem/valor_compra: mantém em colunas se existirem; se não, guarda em historico.origem (se existir historico)
   if (!hasCol('origem') || !hasCol('valor_compra')) {
     if (hasCol('historico')) {
       const hist = (typeof clean.historico === 'object' && clean.historico) ? clean.historico : (safeJSON(clean.historico) || {});
@@ -290,12 +290,12 @@ router.use((req, res, next) => {
     // se existirem, normaliza o valor
     if (clean.valor_compra != null) clean.valor_compra = parseCurrencyBRL(clean.valor_compra);
   }
-
-  // 5.1) Fallback: allowed keys sem coluna -> historico.meta
+ 
+  // 5.1) Fallback: allowed keys sem coluna -> historico.meta (só se houver coluna historico)
   const maybeDateKeys = new Set([
     'nascimento','ultima_ia','parto','ultimo_parto','previsao_parto','previsao_parto_iso'
   ]);
-  let histMeta = clean.historico;
+  let histMeta = hasCol('historico') ? clean.historico : null;
   const metaToPush = {};
   for (const [k, v] of Object.entries(clean)) {
     if (k === 'historico') continue;
@@ -311,10 +311,10 @@ router.use((req, res, next) => {
       delete clean[k];
     }
   }
-  if (Object.keys(metaToPush).length) {
+  if (hasCol('historico') && Object.keys(metaToPush).length) {
     histMeta = pushIntoHistoricoMeta(histMeta, metaToPush);
   }
-  if (histMeta) clean.historico = histMeta;
+  if (hasCol('historico') && histMeta) clean.historico = histMeta;
 
   // 6) mantém apenas colunas válidas (historico é livre)
   const finalClean = {};
