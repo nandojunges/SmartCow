@@ -522,7 +522,9 @@ function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
             n_lactacoes: toInt(dados.nLactacoes),
             ultima_ia: toStr(dados.ultimaIA),
             parto: ultimoPartoStr,
-            ...(ultimoPartoStr ? { previsao_parto: null, ultima_ia: null, categoria: "Lactante" } : {}),
+            // se informou um parto, zera a previsão e marca lactante,
+            // mas **não** zera ultima_ia aqui (mantém histórico correto)
+            ...(ultimoPartoStr ? { previsao_parto: null, categoria: "Lactante" } : {}),
           }
         : {}),
     };
@@ -531,12 +533,14 @@ function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
       const updated = await atualizarAnimal(dados.id, body);
       onSalvo?.(updated);
     } catch (err) {
-      const issues = err?.response?.data?.issues;
-      if (issues?.length) {
+      const resp = err?.response?.data;
+      const issues = resp?.issues;
+      if (Array.isArray(issues) && issues.length) {
         alert("❌ Validação:\n" + issues.map((i) => `${i.path}: ${i.message}`).join("\n"));
       } else {
-        const msg = err?.response?.data?.error || err?.message || "Erro ao atualizar animal";
-        alert(`❌ ${msg}`);
+        const msg = resp?.error || err?.message || "Erro ao atualizar animal";
+        const detail = resp?.detail ? `\n→ ${resp.detail}` : "";
+        alert(`❌ ${msg}${detail}`);
       }
     } finally {
       setSalvando(false);
