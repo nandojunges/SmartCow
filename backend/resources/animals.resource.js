@@ -165,6 +165,25 @@ for (const path of ['/secagem','/parto','/preparto','/pre-parto','/diagnostico',
   router.all(path, (_req, res) => res.status(410).json({ error:'Gone', message:'Endpoints de reprodução foram movidos para /api/v1/reproducao/*' }));
 }
 
+/* ===== DEBUG: schema/cols que o backend enxerga ===== */
+router.get('/__schema', (_req, res) => {
+  try {
+    res.json({
+      table: TABLE,
+      columns: Array.from(COLS),
+      has: {
+        owner: HAS_OWNER,
+        updated_at: HAS_UPDATED_AT,
+        lote_col: LOTE_COL,
+        lote_nome_col: LOTE_NOME_COL,
+        valor_saida_col: VALOR_SAIDA_COL,
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'debug_failed', detail: e?.message || 'unknown' });
+  }
+});
+
 /* ===== Sanitização + mapeamento dinâmico de LOTE ===== */
 const ALLOWED_KEYS = new Set([
   'numero','brinco','nascimento','sexo','raca','categoria',
@@ -322,6 +341,8 @@ router.use((req, res, next) => {
       tips: {
         presentesNoBody: Object.keys(bIn),
         aceitosAntesDeFiltrar: Object.keys(bAllowed),
+        aposAliasesELoteEDatas: Object.keys(clean),
+        finalCleanKeys: Object.keys(finalClean),
         colunasDaTabela: Array.from(COLS),
         historicoSuportado: hasCol('historico'),
         lembrete: 'Os campos precisam existir como coluna; `historico` só é aceito se houver coluna `historico`.'
