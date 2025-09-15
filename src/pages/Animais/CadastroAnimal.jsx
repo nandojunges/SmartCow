@@ -246,7 +246,7 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
       setSalvando(true);
       setDetalhesErro(null);
       const payload = montarPayload();
-      console.log("📦 Payload /animals:", payload);
+      console.dir(payload, { depth: null });
 
       const inserido = await apiCriarAnimal(payload).catch((err) => {
         const dbg = {
@@ -258,6 +258,7 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
           tips: err?.response?.data?.tips,
         };
         console.error("⛔ criarAnimal falhou", dbg);
+        console.log("↩️ backend data:", err?.response?.data);
         setDetalhesErro(dbg);
         throw err;
       });
