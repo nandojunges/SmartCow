@@ -6,34 +6,66 @@ import api, { atualizarAnimal, atualizarAnimalLote } from "../../api";
 import FichaAnimal from "./FichaAnimal/FichaAnimal";
 
 /* ===== helpers ===== */
-function idadeTexto(nascimento) {
-  if (!nascimento || nascimento.length !== 10) return "—";
-  const [d, m, a] = nascimento.split("/").map(Number);
-  const dt = new Date(a, m - 1, d);
-  const meses = Math.max(0, Math.floor((Date.now() - dt) / (1000 * 60 * 60 * 24 * 30.44)));
-  return `${Math.floor(meses / 12)}a ${meses % 12}m`;
+// Aceita 'yyyy-mm-dd', 'yyyy-mm-ddTHH:mm:ssZ' e 'dd/mm/aaaa'
+function parseDateFlexible(s) {
+  if (!s || typeof s !== "string") return null;
+  // ISO: yyyy-mm-dd(THH:mm…)
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const y = +m[1], mo = +m[2], d = +m[3];
+    const dt = new Date(y, mo - 1, d);
+    return Number.isFinite(+dt) ? dt : null;
+  }
+  // BR: dd/mm/aaaa
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) {
+    const d = +m[1], mo = +m[2], y = +m[3];
+    const dt = new Date(y, mo - 1, d);
+    return Number.isFinite(+dt) ? dt : null;
+  }
+  return null;
 }
+
+function idadeTexto(nascimento) {
+  const dt = parseDateFlexible(nascimento);
+  if (!dt) return "—";
+  const hoje = new Date();
+  let meses = (hoje.getFullYear() - dt.getFullYear()) * 12 + (hoje.getMonth() - dt.getMonth());
+  if (hoje.getDate() < dt.getDate()) meses -= 1;
+  if (meses < 0) meses = 0;
+  const anos = Math.floor(meses / 12);
+  const rem = meses % 12;
+  return `${anos}a ${rem}m`;
+}
+
 function del(parto) {
-  if (!parto || parto.length !== 10) return "—";
-  const [d, m, a] = parto.split("/").map(Number);
-  const dt = new Date(a, m - 1, d);
-  const dias = Math.max(0, Math.round((Date.now() - dt) / 86400000));
-  return `${dias}`;
+  const dt = parseDateFlexible(parto);
+  if (!dt) return "—";
+  const dias = Math.floor((Date.now() - dt.getTime()) / 86400000);
+  return Number.isFinite(dias) ? String(Math.max(0, dias)) : "—";
 }
 
 // === datas (para previsão de parto por fallback) ===
-function parseBR(str) {
-  if (!str || typeof str !== "string" || str.length !== 10) return null;
-  const [d, m, y] = str.split("/").map(Number);
-  const dt = new Date(y, m - 1, d);
-  return Number.isFinite(dt.getTime()) ? dt : null;
+function formatBR(dt) {
+  if (!dt) return "—";
+  const dd = String(dt.getDate()).padStart(2, "0");
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const yy = dt.getFullYear();
+  return `${dd}/${mm}/${yy}`;
 }
-function formatBR(dt) { return dt ? dt.toLocaleDateString("pt-BR") : "—"; }
 function addDays(dt, n) { const d = new Date(dt.getTime()); d.setDate(d.getDate() + n); return d; }
 function calcPrevisaoParto(animal) {
-  const direto = parseBR(animal?.previsao_parto || animal?.previsaoParto);
-  if (direto) return direto;
-  const ia = parseBR(animal?.ultima_ia || animal?.ultimaIa);
+  // tenta previsão pronta (BR ou ISO)
+  const prev =
+    parseDateFlexible(animal?.previsao_parto) ||
+    parseDateFlexible(animal?.previsaoParto) ||
+    parseDateFlexible(animal?.previsao_parto_iso) ||
+    parseDateFlexible(animal?.previsaoPartoISO);
+  if (prev) return prev;
+  // fallback por última IA
+  const ia =
+    parseDateFlexible(animal?.ultima_ia) ||
+    parseDateFlexible(animal?.ultimaIa);
   return ia ? addDays(ia, 280) : null;
 }
 
