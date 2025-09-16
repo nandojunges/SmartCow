@@ -340,6 +340,8 @@ export const registrarPreParto = (payload) =>
   apiV1.post('/reproducao/pre-parto', payload).then((r) => r.data);
 export const registrarParto = (payload) =>
   apiV1.post('/reproducao/parto', payload).then((r) => r.data);
+export const registrarIA = (payload) =>
+  apiV1.post('/reproducao/ia', payload).then((r) => r.data);
 export const registrarDiagnostico = (payload) =>
   apiV1.post('/reproducao/diagnostico', payload).then((r) => r.data);
 

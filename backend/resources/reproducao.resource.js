@@ -43,6 +43,22 @@ function toISODateStringSafe(s) {
   try { return toISODateStringStrict(s); } catch { return null; }
 }
 
+function ensureISODate(value) {
+  if (value == null) return null;
+  if (value instanceof Date && !isNaN(value)) return ymd(value);
+  const s = String(value).trim();
+  if (!s) return null;
+  const base = s.length >= 10 ? s.slice(0, 10) : s;
+  return toISODateStringSafe(base);
+}
+
+function isoToBRDate(value) {
+  const iso = ensureISODate(value);
+  if (!iso) return null;
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 const DAY = 86400000;
 const addDays = (dt, n) => { const d = new Date(dt); d.setDate(d.getDate()+n); return d; };
 const subDays = (dt, n) => { const d = new Date(dt); d.setDate(d.getDate()-n); return d; };
@@ -139,6 +155,10 @@ const ANIM_SIT_PROD = findCol(ANIM_COLS, [
 const ANIM_ESTADO = findCol(ANIM_COLS, ['estado','status']);
 
 const ANIM_ULT_IA = findCol(ANIM_COLS, ['ultima_ia','data_ultima_ia','ultimaIA','ultimaIa']);
+const ANIM_IA_ANT = findCol(ANIM_COLS, ['ia_anterior','data_ia_anterior','iaAnterior','ia_anterior_data']);
+const ANIM_ULT_PARTO_COL = findCol(ANIM_COLS, ['ultimo_parto','parto','data_ultimo_parto','ultimoParto']);
+const ANIM_PARTO_ANT_COL = findCol(ANIM_COLS, ['parto_anterior','penultimo_parto','partoAnterior','parto_anterior_data']);
+const ANIM_SECAGEM_ANT_COL = findCol(ANIM_COLS, ['secagem_anterior','ultima_secagem','secagemAnterior','data_secagem_anterior']);
 const ANIM_PREV_PARTO = findCol(ANIM_COLS, ['previsao_parto','prev_parto','previsao_parto_dt','previsaoParto']);
 const ANIM_DECISAO = findCol(ANIM_COLS, ['decisao']);
 const ANIM_NUM   = findCol(ANIM_COLS, ['numero','num','number','identificador']);
@@ -281,6 +301,22 @@ async function hasDgPosBetween(client, animalId, startISO, endISO, ownerId){
   return rows.length>0;
 }
 
+async function getUltimosEventos({ tipo, animalId, ownerId, limit = 1, client }) {
+  if (!EVT_ANIM_COL || !EVT_TIPO || !EVT_DATA) return [];
+  const where = [`"${EVT_ANIM_COL}" = $1`, `"${EVT_TIPO}" = $2`];
+  const params = [animalId, tipo];
+  if (HAS_OWNER_EVT && ownerId) { where.push(`owner_id = $${params.length + 1}`); params.push(ownerId); }
+  const sql = `
+    SELECT ${EVT_ID ? `"${EVT_ID}" AS id,` : ''} "${EVT_DATA}" AS data
+      FROM "${T_EVT}"
+     WHERE ${where.join(' AND ')}
+  ORDER BY "${EVT_DATA}" DESC ${HAS_CREATED_EVT ? ', "created_at" DESC' : ''}
+     LIMIT ${Math.max(1, Number(limit) || 1)}
+  `;
+  const { rows } = await (client || db).query(sql, params);
+  return rows;
+}
+
 async function getAnimalRow(animalId, ownerId) {
   if (!ANIM_ID_COL) return null;
   const fields = [
@@ -301,7 +337,10 @@ async function getAnimalRow(animalId, ownerId) {
  */
 async function atualizarAnimalCampos({
   animalId, ownerId,
-  ultimaIA, situacaoReprodutiva, situacaoProdutiva, previsaoPartoISO, decisao,
+  ultimaIA, iaAnterior,
+  ultimoParto, partoAnterior,
+  secagemAnterior,
+  situacaoReprodutiva, situacaoProdutiva, previsaoPartoISO, decisao,
   client
 }) {
   if (!ANIM_ID_COL) return;
@@ -332,15 +371,79 @@ async function atualizarAnimalCampos({
   const sets = [];
   const params = [];
 
-  if (ANIM_ULT_IA && ultimaIA) {
-    sets.push(`"${ANIM_ULT_IA}" = $${params.length + 1}`);
-    const [y, m, d] = toISODateStringStrict(ultimaIA).split('-');
-    params.push(`${d}/${m}/${y}`); // DD/MM/YYYY
+  if (ANIM_ULT_IA && ultimaIA !== undefined) {
+    if (ultimaIA === null) {
+      sets.push(`"${ANIM_ULT_IA}" = NULL`);
+    } else {
+      const br = isoToBRDate(ultimaIA);
+      if (br) {
+        sets.push(`"${ANIM_ULT_IA}" = $${params.length + 1}`);
+        params.push(br);
+      } else {
+        sets.push(`"${ANIM_ULT_IA}" = NULL`);
+      }
+    }
+  }
+
+  if (ANIM_IA_ANT && iaAnterior !== undefined) {
+    if (iaAnterior === null) {
+      sets.push(`"${ANIM_IA_ANT}" = NULL`);
+    } else {
+      const br = isoToBRDate(iaAnterior);
+      if (br) {
+        sets.push(`"${ANIM_IA_ANT}" = $${params.length + 1}`);
+        params.push(br);
+      } else {
+        sets.push(`"${ANIM_IA_ANT}" = NULL`);
+      }
+    }
   }
 
   if (ANIM_SIT_REP && situacaoReprodutiva) {
     sets.push(`"${ANIM_SIT_REP}" = $${params.length + 1}`);
     params.push(situacaoReprodutiva);
+  }
+
+  if (ANIM_ULT_PARTO_COL && ultimoParto !== undefined) {
+    if (ultimoParto === null) {
+      sets.push(`"${ANIM_ULT_PARTO_COL}" = NULL`);
+    } else {
+      const br = isoToBRDate(ultimoParto);
+      if (br) {
+        sets.push(`"${ANIM_ULT_PARTO_COL}" = $${params.length + 1}`);
+        params.push(br);
+      } else {
+        sets.push(`"${ANIM_ULT_PARTO_COL}" = NULL`);
+      }
+    }
+  }
+
+  if (ANIM_PARTO_ANT_COL && partoAnterior !== undefined) {
+    if (partoAnterior === null) {
+      sets.push(`"${ANIM_PARTO_ANT_COL}" = NULL`);
+    } else {
+      const br = isoToBRDate(partoAnterior);
+      if (br) {
+        sets.push(`"${ANIM_PARTO_ANT_COL}" = $${params.length + 1}`);
+        params.push(br);
+      } else {
+        sets.push(`"${ANIM_PARTO_ANT_COL}" = NULL`);
+      }
+    }
+  }
+
+  if (ANIM_SECAGEM_ANT_COL && secagemAnterior !== undefined) {
+    if (secagemAnterior === null) {
+      sets.push(`"${ANIM_SECAGEM_ANT_COL}" = NULL`);
+    } else {
+      const br = isoToBRDate(secagemAnterior);
+      if (br) {
+        sets.push(`"${ANIM_SECAGEM_ANT_COL}" = $${params.length + 1}`);
+        params.push(br);
+      } else {
+        sets.push(`"${ANIM_SECAGEM_ANT_COL}" = NULL`);
+      }
+    }
   }
 
   // produtiva: coluna dedicada OU fallback "estado"
@@ -1153,6 +1256,7 @@ router.post('/ia', async (req, res) => {
       animalId: ev.animal_id,
       ownerId: uid,
       ultimaIA: dataISO,
+      iaAnterior: iaAnterior?.data ?? null,
       situacaoReprodutiva: ANIM_SIT_REP ? 'inseminada' : null,
       client,
     });
@@ -1328,6 +1432,8 @@ router.post('/parto', async (req, res) => {
     await client.query('BEGIN');
 
     const dataISO = toISODateStringStrict(ev.data);
+    const prevPartos = await getUltimosEventos({ client, ownerId, animalId: ev.animal_id, tipo: 'PARTO', limit: 1 });
+    const partoAnteriorISO = prevPartos?.[0]?.data ?? null;
 
     // 1) agrega info do pré-parto (dias decorridos)
     const preIni = await lastPrePartoBefore(client, ev.animal_id, dataISO, ownerId);
@@ -1356,6 +1462,8 @@ router.post('/parto', async (req, res) => {
     await atualizarAnimalCampos({
       animalId: ev.animal_id,
       ownerId,
+      ultimoParto: dataISO,
+      partoAnterior: partoAnteriorISO,
       situacaoReprodutiva: ANIM_SIT_REP ? 'puerpera' : null,
       previsaoPartoISO: null,
       client,
@@ -1560,7 +1668,12 @@ router.post('/secagem', async (req, res) => {
       aplicacao_id: ev.aplicacao_id ?? null,
     });
 
-    await atualizarAnimalCampos({ animalId: ev.animal_id, ownerId: uid, situacaoProdutiva: 'seca' }).catch(()=>{});
+    await atualizarAnimalCampos({
+      animalId: ev.animal_id,
+      ownerId: uid,
+      secagemAnterior: dataISO,
+      situacaoProdutiva: 'seca'
+    }).catch(()=>{});
     emitir('registroReprodutivoAtualizado');
     emitir('atualizarCalendario');
     emitir('tarefasAtualizadas');
@@ -1763,20 +1876,22 @@ router.use('/eventos', async (req, res, next) => {
         const e = body || {};
         const tipo = (EVT_TIPO && e[EVT_TIPO]) || req.body?.tipo;
         const resultado = (EVT_RESULT && e[EVT_RESULT]) ?? req.body?.resultado;
+        const eventAnimalId = (EVT_ANIM_COL && e[EVT_ANIM_COL]) || req.body?.animal_id;
+        const eventDataISO = ensureISODate((EVT_DATA && e[EVT_DATA]) || req.body?.data);
 
         if (tipo === 'DIAGNOSTICO' && ANIM_SIT_REP) {
           if (resultado === 'prenhe') {
-            const ultimaIA = await getUltimaIA((EVT_ANIM_COL && e[EVT_ANIM_COL]) || req.body?.animal_id, uid);
+            const ultimaIA = await getUltimaIA(eventAnimalId, uid);
             const prev = calculaPrevisaoParto({ dataIA: ultimaIA });
             await atualizarAnimalCampos({
-              animalId: (EVT_ANIM_COL && e[EVT_ANIM_COL]) || req.body?.animal_id,
+              animalId: eventAnimalId,
               ownerId: uid,
               situacaoReprodutiva: 'prenhe',
               previsaoPartoISO: prev ? prev.toISOString() : null,
             });
           } else if (resultado === 'vazia') {
             await atualizarAnimalCampos({
-              animalId: (EVT_ANIM_COL && e[EVT_ANIM_COL]) || req.body?.animal_id,
+              animalId: eventAnimalId,
               ownerId: uid,
               situacaoReprodutiva: 'vazia',
               previsaoPartoISO: null,
@@ -1785,12 +1900,26 @@ router.use('/eventos', async (req, res, next) => {
         }
 
         if (tipo === 'IA') {
-          if (ANIM_ULT_IA) {
+          if (eventAnimalId && eventDataISO) {
+            let ultima = eventDataISO;
+            let anterior = null;
+            if (ANIM_ULT_IA || ANIM_IA_ANT) {
+              const ias = await getUltimosEventos({ tipo: 'IA', animalId: eventAnimalId, ownerId: uid, limit: 2 });
+              if (ias.length > 0) ultima = ensureISODate(ias[0]?.data) || ultima;
+              if (ias.length > 1) anterior = ensureISODate(ias[1]?.data) || null;
+            }
             await atualizarAnimalCampos({
-              animalId: (EVT_ANIM_COL && e[EVT_ANIM_COL]) || req.body?.animal_id,
+              animalId: eventAnimalId,
               ownerId: uid,
-              ultimaIA: toISODateStringStrict((EVT_DATA && e[EVT_DATA]) || req.body?.data),
+              ultimaIA: ultima,
+              iaAnterior: anterior,
               situacaoReprodutiva: ANIM_SIT_REP ? 'inseminada' : null,
+            });
+          } else if (ANIM_SIT_REP && eventAnimalId) {
+            await atualizarAnimalCampos({
+              animalId: eventAnimalId,
+              ownerId: uid,
+              situacaoReprodutiva: 'inseminada',
             });
           }
           const detalhes = ((EVT_DETALHES && e[EVT_DETALHES]) || req.body?.detalhes || {});
@@ -1798,20 +1927,47 @@ router.use('/eventos', async (req, res, next) => {
           if (touroId) await consumirDoseTouroBestEffort({ touroId, ownerId: uid });
         }
 
-        if (tipo === 'PARTO' && ANIM_SIT_REP) {
-          await atualizarAnimalCampos({
-            animalId: (EVT_ANIM_COL && e[EVT_ANIM_COL]) || req.body?.animal_id,
-            ownerId: uid,
-            situacaoReprodutiva: 'puerpera',
-            previsaoPartoISO: null,
-          });
+        if (tipo === 'PARTO') {
+          if (eventAnimalId && eventDataISO) {
+            let ultimo = eventDataISO;
+            let anterior = null;
+            if (ANIM_ULT_PARTO_COL || ANIM_PARTO_ANT_COL) {
+              const partos = await getUltimosEventos({ tipo: 'PARTO', animalId: eventAnimalId, ownerId: uid, limit: 2 });
+              if (partos.length > 0) ultimo = ensureISODate(partos[0]?.data) || ultimo;
+              if (partos.length > 1) anterior = ensureISODate(partos[1]?.data) || null;
+            }
+            await atualizarAnimalCampos({
+              animalId: eventAnimalId,
+              ownerId: uid,
+              ultimoParto: ultimo,
+              partoAnterior: anterior,
+              situacaoReprodutiva: ANIM_SIT_REP ? 'puerpera' : null,
+              previsaoPartoISO: null,
+            });
+          } else if (ANIM_SIT_REP && eventAnimalId) {
+            await atualizarAnimalCampos({
+              animalId: eventAnimalId,
+              ownerId: uid,
+              situacaoReprodutiva: 'puerpera',
+              previsaoPartoISO: null,
+            });
+          }
         }
         if (tipo === 'SECAGEM') {
-          await atualizarAnimalCampos({
-            animalId: (EVT_ANIM_COL && e[EVT_ANIM_COL]) || req.body?.animal_id,
-            ownerId: uid,
-            situacaoProdutiva: 'seca',
-          }).catch(()=>{});
+          if (eventAnimalId && eventDataISO) {
+            await atualizarAnimalCampos({
+              animalId: eventAnimalId,
+              ownerId: uid,
+              secagemAnterior: eventDataISO,
+              situacaoProdutiva: 'seca',
+            }).catch(()=>{});
+          } else {
+            await atualizarAnimalCampos({
+              animalId: eventAnimalId,
+              ownerId: uid,
+              situacaoProdutiva: 'seca',
+            }).catch(()=>{});
+          }
         }
         // >>> permanência via /eventos também (quando DECISAO é criada pela rota genérica)
         if (tipo === 'DECISAO') {

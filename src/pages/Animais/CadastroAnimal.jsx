@@ -1,7 +1,13 @@
 // src/pages/Animais/CadastroAnimal.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Select from "react-select";
-import { criarAnimal as apiCriarAnimal } from "../../api";
+import {
+  criarAnimal as apiCriarAnimal,
+  getAnimal as apiGetAnimal,
+  registrarIA,
+  registrarParto,
+  registrarSecagem,
+} from "../../api";
 
 /* ===========================================
    Helpers
@@ -40,6 +46,15 @@ function maskMoedaBR(v) {
   let n = String(v).replace(/\D/g, "");
   n = (parseInt(n || "0", 10) / 100).toFixed(2);
   return n.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+function toComparableISO(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  return `${m[3]}-${m[2]}-${m[1]}`;
 }
 function previsaoPartoISO(ultimaIA) {
   if (!ultimaIA || ultimaIA.length !== 10) return { br: "", iso: "" };
@@ -101,6 +116,7 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
   const [mae, setMae] = useState("");
   const [ultimaIA, setUltimaIA] = useState("");
   const [ultimoParto, setUltimoParto] = useState("");
+  const [secagemAnterior, setSecagemAnterior] = useState("");
   const [nLactacoes, setNLactacoes] = useState("");
 
   /** Feedback */
@@ -192,7 +208,7 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
     setBrinco(""); setNascimento(""); setSexo(""); setRaca(""); setNovaRaca("");
     setOrigem("propriedade"); setValorCompra("");
     setIdade(""); setCategoria(""); setSitProd(""); setSitReprod("");
-    setPai(""); setMae(""); setUltimaIA(""); setUltimoParto(""); setNLactacoes("");
+    setPai(""); setMae(""); setUltimaIA(""); setUltimoParto(""); setSecagemAnterior(""); setNLactacoes("");
     setMostrarAvancados(false);
     setNumero(String(parseInt(numero || "0", 10) + 1));
   };
@@ -212,15 +228,10 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
     // Produtiva/Reprodutiva só se existirem (evita 400 quando schema é minimalista)
     if (sitProd) base.situacao_produtiva = sitProd;
 
-    const reprodFinal = (sexo === "femea" && mesesIdade < 12) ? "vazia" : (sitReprod || "");
-    if (reprodFinal) base.situacao_reprodutiva = reprodFinal;
-
     // Avançados: só envia se preenchidos
     if (pai) base.pai = pai;
     if (mae) base.mae = mae;
     if (nLactacoes) base.n_lactacoes = Number(nLactacoes || 0);
-    if (ultimaIA) base.ultima_ia = ultimaIA;
-    if (ultimoParto) { base.ultimo_parto = ultimoParto; base.parto = ultimoParto; }
     if (prevPartoBR) base.previsao_parto = prevPartoBR;
     if (prevPartoISO) base.previsao_parto_iso = prevPartoISO;
 
@@ -241,6 +252,8 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
     try {
       setSalvando(true);
       setDetalhesErro(null);
+      setMensagemErro("");
+      setMensagemSucesso("");
       const payload = montarPayload();
       console.dir(payload, { depth: null });
 
@@ -259,12 +272,77 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
         throw err;
       });
 
-      // atualiza lista
-      const novo = inserido && typeof inserido === "object" ? inserido : { ...payload };
-      onAtualizar?.([...(animais || []), novo]);
+      const animalId = inserido?.id ?? inserido?.animal_id ?? null;
+      const retroEventos = [];
+      if (ultimaIA) retroEventos.push({ tipo: "IA", data: ultimaIA, iso: toComparableISO(ultimaIA) });
+      if (ultimoParto) retroEventos.push({ tipo: "PARTO", data: ultimoParto, iso: toComparableISO(ultimoParto) });
+      if (secagemAnterior) retroEventos.push({ tipo: "SECAGEM", data: secagemAnterior, iso: toComparableISO(secagemAnterior) });
+      retroEventos.sort((a, b) => {
+        const ia = a.iso || "";
+        const ib = b.iso || "";
+        if (!ia && !ib) return 0;
+        if (!ia) return -1;
+        if (!ib) return 1;
+        return ia.localeCompare(ib);
+      });
 
-      setMensagemSucesso("✅ Animal cadastrado com sucesso!");
-      setTimeout(() => setMensagemSucesso(""), 2500);
+      const eventErrors = [];
+      const eventosDebug = [];
+      if (animalId && retroEventos.length) {
+        for (const evt of retroEventos) {
+          try {
+            if (evt.tipo === "IA") {
+              await registrarIA({ animal_id: animalId, data: evt.data });
+            } else if (evt.tipo === "PARTO") {
+              await registrarParto({ animal_id: animalId, data: evt.data });
+            } else if (evt.tipo === "SECAGEM") {
+              await registrarSecagem({ animal_id: animalId, data: evt.data });
+            }
+          } catch (evtErr) {
+            eventErrors.push(evt.tipo);
+            console.error(`⛔ Falha ao registrar evento ${evt.tipo}`, evtErr?.response?.data || evtErr);
+            eventosDebug.push({
+              tipo: evt.tipo,
+              status: evtErr?.response?.status,
+              data: evtErr?.response?.data,
+              message: evtErr?.message,
+            });
+          }
+        }
+      }
+
+      let finalAnimal = (inserido && typeof inserido === "object") ? inserido : { ...payload, id: animalId };
+      if (animalId) {
+        try {
+          const refreshed = await apiGetAnimal(animalId);
+          if (refreshed && typeof refreshed === "object") finalAnimal = refreshed;
+        } catch (fetchErr) {
+          eventosDebug.push({
+            tipo: "FETCH_ANIMAL",
+            status: fetchErr?.response?.status,
+            data: fetchErr?.response?.data,
+            message: fetchErr?.message,
+          });
+        }
+      } else if (retroEventos.length) {
+        finalAnimal = { ...finalAnimal };
+        if (ultimaIA) finalAnimal.ultima_ia = ultimaIA;
+        if (ultimoParto) finalAnimal.ultimo_parto = ultimoParto;
+        if (secagemAnterior) finalAnimal.secagem_anterior = secagemAnterior;
+      }
+
+      onAtualizar?.([...(animais || []), finalAnimal]);
+
+      if (eventErrors.length) {
+        setMensagemSucesso("");
+        setMensagemErro(`Animal cadastrado, mas houve falha ao registrar: ${eventErrors.join(", ")}`);
+        setTimeout(() => setMensagemErro(""), 3500);
+        setDetalhesErro(eventosDebug.length ? { eventosFalhos: eventosDebug } : null);
+      } else {
+        setMensagemSucesso("✅ Animal cadastrado com sucesso!");
+        setTimeout(() => setMensagemSucesso(""), 2500);
+        setDetalhesErro(null);
+      }
 
       if (eNovo) limparForm();
     } catch (err) {
@@ -489,6 +567,11 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
                            value={ultimoParto} onChange={(e)=>setUltimoParto(formatarDataDigitada(e.target.value))} />
                   </div>
                   <div>
+                    <label style={lbl}>Secagem anterior</label>
+                    <input style={inputBase} placeholder="dd/mm/aaaa"
+                           value={secagemAnterior} onChange={(e)=>setSecagemAnterior(formatarDataDigitada(e.target.value))} />
+                  </div>
+                  <div>
                     <label style={lbl}>Número de lactações</label>
                     <input style={inputBase} type="number" min="0" value={nLactacoes} onChange={(e)=>setNLactacoes(e.target.value)} />
                   </div>
@@ -538,6 +621,7 @@ export default function CadastroAnimal({ animais = [], onAtualizar }) {
                     <div style={rowKV}><span style={k}>Mãe</span><span style={v}>{mae || "—"}</span></div>
                     <div style={rowKV}><span style={k}>Últ. IA</span><span style={v}>{ultimaIA || "—"}</span></div>
                     <div style={rowKV}><span style={k}>Últ. Parto</span><span style={v}>{ultimoParto || "—"}</span></div>
+                    <div style={rowKV}><span style={k}>Secagem</span><span style={v}>{secagemAnterior || "—"}</span></div>
                     {prevPartoBR && <div style={rowKV}><span style={k}>Previsão Parto</span><span style={v}>{prevPartoBR}</span></div>}
                     {!!nLactacoes && <div style={rowKV}><span style={k}>Lactações</span><span style={v}>{nLactacoes}</span></div>}
                   </>

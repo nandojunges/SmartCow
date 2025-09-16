@@ -2,7 +2,13 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Pencil, FileText, ChevronDown, Check } from "lucide-react";
 import Select from "react-select";
-import api, { atualizarAnimal, atualizarAnimalLote } from "../../api";
+import api, {
+  atualizarAnimal,
+  atualizarAnimalLote,
+  registrarIA,
+  registrarParto,
+  registrarSecagem,
+} from "../../api";
 import FichaAnimal from "./FichaAnimal/FichaAnimal";
 
 /* ===== helpers ===== */
@@ -43,6 +49,15 @@ function del(parto) {
   if (!dt) return "—";
   const dias = Math.floor((Date.now() - dt.getTime()) / 86400000);
   return Number.isFinite(dias) ? String(Math.max(0, dias)) : "—";
+}
+
+function toComparableISO(value) {
+  const dt = parseDateFlexible(value);
+  if (!dt) return null;
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 // === datas (para previsão de parto por fallback) ===
@@ -463,6 +478,7 @@ function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
     nLactacoes: animal?.n_lactacoes ?? "",
     ultimaIA: animal?.ultima_ia ?? "",
     ultimoParto: animal?.parto ?? "",
+    secagemAnterior: animal?.secagem_anterior ?? animal?.secagemAnterior ?? "",
     pai: animal?.pai ?? "",
     mae: animal?.mae ?? "",
   };
@@ -505,6 +521,7 @@ function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
     setSalvando(true);
 
     const ultimoPartoStr = toStr(dados.ultimoParto);
+    const secagemStr = toStr(dados.secagemAnterior);
 
     const body = {
       numero: toStr(dados.numero),
@@ -514,24 +531,84 @@ function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
       raca: toStr(dados.raca),
       categoria: toStr(dados.categoria),
       situacao_produtiva: toStr(dados.situacao_produtiva),
-      situacao_reprodutiva: toStr(dados.situacao_reprodutiva),
       pai: toStr(dados.pai),
       mae: toStr(dados.mae),
-      ...(dados.sexo !== "macho"
-        ? {
-            n_lactacoes: toInt(dados.nLactacoes),
-            ultima_ia: toStr(dados.ultimaIA),
-            parto: ultimoPartoStr,
-            // se informou um parto, zera a previsão e marca lactante,
-            // mas **não** zera ultima_ia aqui (mantém histórico correto)
-            ...(ultimoPartoStr ? { previsao_parto: null, categoria: "Lactante" } : {}),
-          }
-        : {}),
+      ...(dados.sexo !== "macho" ? { n_lactacoes: toInt(dados.nLactacoes) } : {}),
     };
+    if (dados.sexo !== "macho" && ultimoPartoStr) body.categoria = "Lactante";
+
+    const retroEventos = [];
+    if (dados.sexo !== "macho") {
+      const novaIA = toComparableISO(dados.ultimaIA);
+      const iaAtual = toComparableISO(animal?.ultima_ia ?? animal?.ultimaIa ?? null);
+      if (novaIA && novaIA !== iaAtual) retroEventos.push({ tipo: "IA", data: dados.ultimaIA, iso: novaIA });
+
+      const novoPartoIso = toComparableISO(ultimoPartoStr);
+      const partoAtual = toComparableISO(animal?.parto ?? animal?.ultimo_parto ?? animal?.ultimoParto ?? null);
+      if (novoPartoIso && novoPartoIso !== partoAtual) retroEventos.push({ tipo: "PARTO", data: ultimoPartoStr, iso: novoPartoIso });
+
+      const novaSecagemIso = toComparableISO(secagemStr);
+      const secagemAtual = toComparableISO(animal?.secagem_anterior ?? animal?.secagemAnterior ?? null);
+      if (novaSecagemIso && novaSecagemIso !== secagemAtual) retroEventos.push({ tipo: "SECAGEM", data: secagemStr, iso: novaSecagemIso });
+    }
+    retroEventos.sort((a, b) => {
+      const ia = a.iso || "";
+      const ib = b.iso || "";
+      if (!ia && !ib) return 0;
+      if (!ia) return -1;
+      if (!ib) return 1;
+      return ia.localeCompare(ib);
+    });
 
     try {
       const updated = await atualizarAnimal(dados.id, body);
-      onSalvo?.(updated);
+
+      const eventErrors = [];
+      const eventosDebug = [];
+      if (retroEventos.length) {
+        for (const evt of retroEventos) {
+          try {
+            if (evt.tipo === "IA") {
+              await registrarIA({ animal_id: dados.id, data: evt.data });
+            } else if (evt.tipo === "PARTO") {
+              await registrarParto({ animal_id: dados.id, data: evt.data });
+            } else if (evt.tipo === "SECAGEM") {
+              await registrarSecagem({ animal_id: dados.id, data: evt.data });
+            }
+          } catch (evtErr) {
+            eventErrors.push(evt.tipo);
+            console.error(`⛔ Falha ao registrar evento ${evt.tipo}`, evtErr?.response?.data || evtErr);
+            eventosDebug.push({
+              tipo: evt.tipo,
+              status: evtErr?.response?.status,
+              data: evtErr?.response?.data,
+              message: evtErr?.message,
+            });
+          }
+        }
+      }
+
+      let finalData = updated;
+      try {
+        const { data } = await api.get(`/api/v1/animals/${dados.id}`, { headers: { "Cache-Control": "no-cache" } });
+        if (data && typeof data === "object") finalData = data;
+      } catch (fetchErr) {
+        if (retroEventos.length) {
+          console.warn("⚠️ Não foi possível recarregar animal após eventos", fetchErr?.response?.data || fetchErr);
+          eventosDebug.push({
+            tipo: "FETCH_ANIMAL",
+            status: fetchErr?.response?.status,
+            data: fetchErr?.response?.data,
+            message: fetchErr?.message,
+          });
+        }
+      }
+
+      onSalvo?.(finalData);
+
+      if (eventErrors.length) {
+        alert(`✅ Dados básicos salvos, mas houve falha ao registrar: ${eventErrors.join(", ")}`);
+      }
     } catch (err) {
       const resp = err?.response?.data;
       const issues = resp?.issues;
@@ -650,6 +727,11 @@ function ModalEditarAnimal({ animal, onFechar, onSalvo }) {
                 <div><label>Último Parto</label>
                   <input value={dados.ultimoParto}
                     onChange={(e) => setCampo("ultimoParto", formatarDataDigitada(e.target.value))}
+                    placeholder="dd/mm/aaaa" style={input()} />
+                </div>
+                <div><label>Secagem anterior</label>
+                  <input value={dados.secagemAnterior}
+                    onChange={(e) => setCampo("secagemAnterior", formatarDataDigitada(e.target.value))}
                     placeholder="dd/mm/aaaa" style={input()} />
                 </div>
               </>
