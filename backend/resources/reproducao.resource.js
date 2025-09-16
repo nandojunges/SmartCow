@@ -1410,7 +1410,7 @@ router.post('/diagnostico', async (req, res) => {
 
     await atualizarAnimalCampos(camposAnimal).catch(() => {});
 
-    let situacaoFinal = ANIM_SIT_REP ? (camposAnimal.situacaoReprodutiva ?? null) : null;
+    let situacaoFinal = camposAnimal.situacaoReprodutiva ?? null;
     let previsaoPartoFinal = camposAnimal.previsaoPartoISO ?? null;
 
     if (ANIM_ID_COL && (ANIM_SIT_REP || ANIM_PREV_PARTO)) {
@@ -1440,6 +1440,12 @@ router.post('/diagnostico', async (req, res) => {
           console.warn('[POST /reproducao/diagnostico] falha ao ler estado final:', err?.message);
         }
       }
+    }
+
+    if (typeof situacaoFinal === 'string' && situacaoFinal) {
+      const norm = normStr(situacaoFinal).trim();
+      if (norm === 'prenhe' || norm === 'prenha') situacaoFinal = 'Prenhe';
+      else if (norm === 'vazia' || norm === 'vazio') situacaoFinal = 'Vazia';
     }
 
     await client.query('COMMIT');
