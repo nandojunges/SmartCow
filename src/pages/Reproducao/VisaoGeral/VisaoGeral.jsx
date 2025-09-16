@@ -46,11 +46,13 @@ function parseISO(str){
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
 function parseAnyDate(str){
-  if(!str) return null;
+  if (str instanceof Date) return Number.isFinite(str.getTime()) ? str : null;
+  if(!str && str!==0) return null;
   const s = String(str).trim();
   if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return parseBR(s);
   if (/^\d{4}-\d{2}-\d{2}/.test(s))  return parseISO(s);
-  return null;
+  const d = new Date(s);
+  return Number.isFinite(d.getTime()) ? d : null;
 }
 
 function formatBR(dt){ return dt ? dt.toLocaleDateString("pt-BR") : "—"; }
@@ -184,11 +186,15 @@ function classifyReprod(row, settings, normProd){
   const iaDt = parseAnyDate(row.ultima_ia);
   if(iaDt){
     const d = diffDays(today(), iaDt);
-    if (d < settings.dg30janela[0])          return { label:"Inseminada",        tone:"info" };
-    if (d <= settings.dg30janela[1])         return { label:"Inseminada (DG30)", tone:"warn" };
-    if (d <  settings.dg60janela[0])         return { label:"Inseminada",        tone:"info" };
-    if (d <= settings.dg60janela[1])         return { label:"Inseminada (DG60)", tone:"warn" };
-    if (d <= settings.dg60janela[1] + 15)    return { label:"Inseminada",        tone:"info" };
+    // janelas explícitas
+    if (d < settings.dg30janela[0])             return { label:"Inseminada",        tone:"info" };
+    if (d >= settings.dg30janela[0] && d <= settings.dg30janela[1])
+                                                return { label:"Inseminada (DG30)", tone:"warn" };
+    if (d > settings.dg30janela[1] && d < settings.dg60janela[0])
+                                                return { label:"Inseminada",        tone:"info" };
+    if (d >= settings.dg60janela[0] && d <= settings.dg60janela[1])
+                                                return { label:"Inseminada (DG60)", tone:"warn" };
+    if (d <= settings.dg60janela[1] + 15)       return { label:"Inseminada",        tone:"info" };
   }
 
   // Vazia declarada
@@ -206,7 +212,19 @@ function buildStep(row, settings, normRep){
   // 1) Prenhe => nada
   if(normRep.label==="Prenhe") return { key:"NONE", label:"—", dueDate:null, detail:{ sitReprod:"Prenhe" } };
 
-  // 2) Em PEV => sugestão de Pré-sincr. nos últimos dias do PEV
+  // 2) Existe IA? **DG tem prioridade** sobre outras sugestões (exceto Prenhe).
+  if (iaDt) {
+    const d = diffDays(hoje, iaDt);
+    if (d >= settings.dg30janela[0] && d <= settings.dg30janela[1]) {
+      return { key:"DG30", label:"DG 30d", dueDate: addDays(iaDt, settings.dg30janela[0]), detail:{ sitReprod:"IA 30d" } };
+    }
+    if (d >= settings.dg60janela[0] && d <= settings.dg60janela[1]) {
+      return { key:"DG60", label:"DG 60d", dueDate: addDays(iaDt, settings.dg60janela[0]), detail:{ sitReprod:"IA 60d" } };
+    }
+    // Fora das janelas de DG → segue fluxo normal
+  }
+
+  // 3) Em PEV => sugestão de Pré-sincr. nos últimos dias do PEV
   if(normRep.label==="PEV"){
     const partoDt=parseBR(row.parto);
     if(partoDt){
@@ -219,24 +237,18 @@ function buildStep(row, settings, normRep){
     return { key:"NONE", label:"—", dueDate:null, detail:{ sitReprod:"PEV" } };
   }
 
-  // 3) Pré-sincr. => próximo passo é IATF
+  // 4) Pré-sincr. => próximo passo é IATF
   if(normRep.label==="Pré-sincr.")
     return { key:"IATF", label:"Iniciar IATF", dueDate:hoje, detail:{ sitReprod:"Pré-sincr." } };
 
-  // 4) IATF => registrar IA
+  // 5) IATF => registrar IA
   if(normRep.label==="IATF")
     return { key:"IA", label:"Registrar IA", dueDate:hoje, detail:{ sitReprod:"IATF" } };
 
-  // 5) Inseminada → DG
-  if(iaDt){
-    const d=diffDays(hoje, iaDt);
-    if(d>=settings.dg30janela[0] && d<=settings.dg30janela[1])
-      return { key:"DG30", label:`DG 30d`, dueDate:addDays(iaDt, settings.dg30janela[0]), detail:{ sitReprod:"IA 30d" } };
-    if(d>=settings.dg60janela[0] && d<=settings.dg60janela[1])
-      return { key:"DG60", label:`DG 60d`, dueDate:addDays(iaDt, settings.dg60janela[0]), detail:{ sitReprod:"IA 60d" } };
-  }
+  // (nota: o bloco de IA → DG subiu para antes do PEV)
 
-  // 6) Vazia => IATF
+  // 6) Vazia ou “Inseminada” muito antiga (sem DG registrado) => IATF
+  //    cobre o caso “cadastrei como vazia após IA” (você já fez o DG e marcou vazia)
   if(normRep.label==="Vazia")
     return { key:"IATF", label:"Iniciar IATF", dueDate:hoje, detail:{ sitReprod:"Vazia" } };
 
@@ -503,6 +515,14 @@ async function getAnimaisFromAPI(){
       parto:a.parto||a.ultimo_parto||"",
       ultima_ia:a[ultimaIaKey]||"",
       previsao_parto:a[prevPartoKey]||"",
+      // fallback local — se prenhe e sem previsao, calcula pela IA (mostra na UI)
+      ...( (String(a[sitRepKey]||"").toLowerCase().includes("pren") && !(a[prevPartoKey]))
+          ? { previsao_parto: (() => {
+                const d = parseAnyDate(a[ultimaIaKey]);
+                return d ? isoToBR(toISODate(addDays(d, 283))) : "";
+            })() }
+          : {}
+        ),
       situacao_reprodutiva:a[sitRepKey]||"—",
       situacao_produtiva:a[sitProdKey]||"",
       decisao: (a.decisao === CLEAR_TOKEN ? "" : (a.decisao || "")),
