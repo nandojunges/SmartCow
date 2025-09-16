@@ -1317,75 +1317,114 @@ router.post('/ia', async (req, res) => {
 
 /* =================== Diagnóstico =================== */
 router.post('/diagnostico', async (req, res) => {
+  const ownerId = extractUserId(req);
+  if (HAS_OWNER_EVT && !ownerId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const body = req.body || {};
+  const animalId = body.animal_id ?? body.animalId ?? body.id_animal;
+  if (!animalId) return res.status(400).json({ detail: 'animal_id obrigatório.' });
+
+  const rawDate = body.dataISO ?? body.data ?? null;
+  let dataISO;
   try {
-    const body = req.body || {};
-    const animal_id = body.animal_id ?? body.animalId ?? body.id_animal;
-    const resultadoRaw = (body.resultado ?? body.status ?? '').toString().trim().toLowerCase();
-    const detalhes = body.detalhes ?? null;
+    dataISO = rawDate ? toISODateStringStrict(rawDate) : ymd(new Date());
+  } catch (err) {
+    return res.status(422).json({ detail: err?.message || 'Data inválida (use YYYY-MM-DD ou DD/MM/AAAA).' });
+  }
 
-    const dt = parseAnyDate(body.dataISO || body.data);
-    const dataISO = dt ? toISODate(dt) : toISODate(new Date());
+  const resultadoRaw = String(body.resultado ?? body.status ?? '').trim().toLowerCase();
+  let resultado = 'indeterminado';
+  if (['prenhe', 'prenha'].includes(resultadoRaw)) resultado = 'prenhe';
+  else if (['vazia', 'negativo', 'vazio'].includes(resultadoRaw)) resultado = 'vazia';
+  else if (['indeterminado', 'nao vista', 'não vista', 'nao-vista', 'não-vista', 'nao_vista'].includes(resultadoRaw)) resultado = 'indeterminado';
 
-    if (!animal_id) return res.status(400).json({ detail: 'animal_id obrigatório.' });
+  let detalhes = {};
+  const detalhesBody = body.detalhes;
+  if (detalhesBody && typeof detalhesBody === 'object' && !Array.isArray(detalhesBody)) {
+    detalhes = { ...detalhesBody };
+  } else if (typeof detalhesBody === 'string') {
+    try { detalhes = JSON.parse(detalhesBody); }
+    catch { detalhes = { observacao: detalhesBody }; }
+  }
+  if (!EVT_RESULT) {
+    if (detalhes?.resultado == null) detalhes = { ...detalhes, resultado };
+    else detalhes = { ...detalhes, resultado: String(detalhes.resultado).toLowerCase() };
+  } else if (detalhes && detalhes.resultado == null) {
+    detalhes = { ...detalhes, resultado };
+  }
 
-    let resultado = 'indeterminado';
-    if (['prenhe', 'prenha'].includes(resultadoRaw)) resultado = 'prenhe';
-    else if (['vazia', 'negativo', 'vazio'].includes(resultadoRaw)) resultado = 'vazia';
-    else if (['indeterminado', 'nao vista', 'não vista', 'nao-vista', 'não-vista', 'nao_vista'].includes(resultadoRaw)) resultado = 'indeterminado';
+  if (!EVT_ANIM_COL || !EVT_DATA || !EVT_TIPO) {
+    return res.status(500).json({ detail: 'Configuração da tabela de eventos indisponível para diagnóstico.' });
+  }
 
-    await db.query(
-      `INSERT INTO reproducao_eventos (animal_id, data, tipo, resultado, detalhes)
-       VALUES ($1, $2, 'DIAGNOSTICO', $3, $4)`,
-      [animal_id, dataISO, resultado, detalhes]
-    );
+  let client;
+  try {
+    client = await db.connect();
+    await client.query('BEGIN');
 
+    const cols = [];
+    const vals = [];
+    const params = [];
+
+    cols.push(`"${EVT_ANIM_COL}"`); params.push(animalId); vals.push(`$${params.length}`);
+    cols.push(`"${EVT_DATA}"`);     params.push(dataISO);   vals.push(`$${params.length}`);
+    cols.push(`"${EVT_TIPO}"`);     params.push('DIAGNOSTICO'); vals.push(`$${params.length}`);
+    if (EVT_DETALHES) {
+      params.push(JSON.stringify(detalhes || {}));
+      vals.push(`$${params.length}::jsonb`);
+      cols.push(`"${EVT_DETALHES}"`);
+    }
+    if (EVT_RESULT) {
+      params.push(resultado);
+      vals.push(`$${params.length}`);
+      cols.push(`"${EVT_RESULT}"`);
+    }
+    if (HAS_OWNER_EVT && ownerId) {
+      params.push(ownerId);
+      vals.push(`$${params.length}`);
+      cols.push('owner_id');
+    }
+    if (HAS_UPD_EVT)   { cols.push('updated_at'); vals.push('NOW()'); }
+    if (HAS_CREATED_EVT) { cols.push('created_at'); vals.push('NOW()'); }
+
+    const returning = evtListFields.length
+      ? evtListFields.map(f => `"${f}"`).join(', ')
+      : '*';
+    const sql = `INSERT INTO "${T_EVT}" (${cols.join(', ')}) VALUES (${vals.join(', ')}) RETURNING ${returning};`;
+    const { rows } = await client.query(sql, params);
+    const novo = rows[0] || {};
+
+    const camposAnimal = { animalId, ownerId, client };
     if (resultado === 'prenhe') {
-      const { rows: iaRows } = await db.query(
-        `SELECT data AS ultima_ia
-           FROM reproducao_eventos
-          WHERE animal_id = $1 AND tipo = 'IA'
-          ORDER BY data DESC
-          LIMIT 1`,
-        [animal_id]
-      );
-      let previsao_parto = null;
-      if (iaRows?.length) {
-        const ia = parseISO(iaRows[0].ultima_ia) || parseBR(iaRows[0].ultima_ia);
-        if (ia) {
-          const pp = new Date(ia.getTime());
-          pp.setDate(pp.getDate() + DIAS_GESTACAO);
-          previsao_parto = toISODate(pp);
+      const iaAnterior = await lastIaBefore(client, animalId, dataISO, ownerId);
+      if (iaAnterior?.data) {
+        const dtIA = parseAnyDate(iaAnterior.data);
+        if (dtIA) {
+          const prev = addDays(dtIA, DIAS_GESTACAO);
+          camposAnimal.previsaoPartoISO = ymd(prev);
         }
       }
-
-      await db.query(
-        `UPDATE animals
-            SET situacao_reprodutiva = 'Prenhe',
-                ${previsao_parto ? `previsao_parto = $2,` : ''} updated_at = now()
-          WHERE id = $1`,
-        previsao_parto ? [animal_id, previsao_parto] : [animal_id]
-      );
+      camposAnimal.situacaoReprodutiva = 'Prenhe';
     } else if (resultado === 'vazia') {
-      await db.query(
-        `UPDATE animals
-            SET situacao_reprodutiva = 'Vazia',
-                -- se quiser limpar a previsão, descomente a linha abaixo
-                -- previsao_parto = NULL,
-                updated_at = now()
-          WHERE id = $1`,
-        [animal_id]
-      );
+      camposAnimal.situacaoReprodutiva = 'Vazia';
     }
+
+    await atualizarAnimalCampos(camposAnimal).catch(() => {});
+
+    await client.query('COMMIT');
 
     emitir('protocolosAtivosAtualizados');
     emitir('registroReprodutivoAtualizado');
     emitir('atualizarCalendario');
     emitir('tarefasAtualizadas');
 
-    return res.status(201).json({ ok: true });
+    return res.status(201).json(novo);
   } catch (e) {
+    try { await client?.query('ROLLBACK'); } catch {}
     console.error('[POST /reproducao/diagnostico] erro:', e);
     return res.status(500).json({ detail: 'Falha ao salvar diagnóstico.' });
+  } finally {
+    client?.release?.();
   }
 });
 
