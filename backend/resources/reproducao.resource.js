@@ -91,6 +91,33 @@ function parseDateFlexible(v) {
   return Number.isFinite(t) ? new Date(t) : null;
 }
 
+// utils de data bem tolerantes
+function parseBR(str) {
+  const m = String(str || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const d = +m[1], mo = +m[2], y = +m[3];
+  const dt = new Date(y, mo - 1, d);
+  return Number.isFinite(dt.getTime()) ? dt : null;
+}
+function parseISO(str) {
+  const m = String(str || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const dt = new Date(y, mo - 1, d);
+  return Number.isFinite(dt.getTime()) ? dt : null;
+}
+function toISODate(dt) {
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const d = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+function parseAnyDate(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  return s.includes('/') ? parseBR(s) : s.includes('-') ? parseISO(s) : null;
+}
+
 /* ================= introspecção dinâmica ================= */
 async function getCols(table) {
   try {
@@ -1290,89 +1317,76 @@ router.post('/ia', async (req, res) => {
 
 /* =================== Diagnóstico =================== */
 router.post('/diagnostico', async (req, res) => {
-  const uid = extractUserId(req);
-  if (HAS_OWNER_EVT && !uid) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const body = req.body || {};
+    const animal_id = body.animal_id ?? body.animalId ?? body.id_animal;
+    const resultadoRaw = (body.resultado ?? body.status ?? '').toString().trim().toLowerCase();
+    const detalhes = body.detalhes ?? null;
 
-  const base = { ...req.body, tipo: 'DIAGNOSTICO' };
-  const parsed = eventoCreateSchema.extend({ resultado: z.enum(['prenhe','vazia','indeterminado']) }).safeParse(base);
-  if (!parsed.success) return res.status(400).json({ error: 'ValidationError', issues: parsed.error.issues });
-  const ev = parsed.data;
+    const dt = parseAnyDate(body.dataISO || body.data);
+    const dataISO = dt ? toISODate(dt) : toISODate(new Date());
 
-  const dxISO = toISODateStringStrict(ev.data);
-  const iaRef = await lastIaBefore(null, ev.animal_id, dxISO, uid);
-  if (!iaRef) return res.status(422).json({ error:'Sem IA anterior para parear.' });
+    if (!animal_id) return res.status(400).json({ detail: 'animal_id obrigatório.' });
 
-  const { janela, metodo, observacao } = ev.detalhes || {};
-  if (!janela) return res.status(400).json({ error:'ValidationError', message:'janela obrigatória' });
-  if (['DG30','DG60'].includes(janela)) {
-    const regra = RULES[janela] || {};
-    const diff = _diasEntre(iaRef.data, dxISO);
-    if (diff < regra.min || diff > regra.max) {
-      const faixa = `${regra.min}-${regra.max}`;
-      return res.status(422).json({
-        error: 'WindowError',
-        message: `${janela} fora da janela (${faixa} dias após IA, encontrado ${diff})`
-      });
-    }
-  }
+    let resultado = 'indeterminado';
+    if (['prenhe', 'prenha'].includes(resultadoRaw)) resultado = 'prenhe';
+    else if (['vazia', 'negativo', 'vazio'].includes(resultadoRaw)) resultado = 'vazia';
+    else if (['indeterminado', 'nao vista', 'não vista', 'nao-vista', 'não-vista', 'nao_vista'].includes(resultadoRaw)) resultado = 'indeterminado';
 
-  const detalhes = { janela, ia_ref_data: iaRef.data, ia_ref_id: iaRef.id || null };
-  if (metodo) detalhes.metodo = metodo;
-  if (observacao) detalhes.observacao = observacao;
+    await db.query(
+      `INSERT INTO reproducao_eventos (animal_id, data, tipo, resultado, detalhes)
+       VALUES ($1, $2, 'DIAGNOSTICO', $3, $4)`,
+      [animal_id, dataISO, resultado, detalhes]
+    );
 
-  const cols = [], vals = [], params = [];
-  if (EVT_ANIM_COL) { cols.push(`"${EVT_ANIM_COL}"`); params.push(ev.animal_id); vals.push(`$${params.length}`); }
-  if (EVT_DATA)     { cols.push(`"${EVT_DATA}"`);     params.push(dxISO); vals.push(`$${params.length}`); }
-  if (EVT_TIPO)     { cols.push(`"${EVT_TIPO}"`);     params.push('DIAGNOSTICO'); vals.push(`$${params.length}`); }
-  if (EVT_DETALHES) { cols.push(`"${EVT_DETALHES}"`); params.push(JSON.stringify(detalhes)); vals.push(`$${params.length}::jsonb`); }
-  if (EVT_RESULT)   { cols.push(`"${EVT_RESULT}"`);   params.push(ev.resultado); vals.push(`$${params.length}`); }
-  if (HAS_OWNER_EVT){ cols.push('owner_id'); params.push(uid); vals.push(`$${params.length}`); }
-  if (HAS_UPD_EVT)  { cols.push('updated_at'); vals.push('NOW()'); }
-  if (HAS_CREATED_EVT){ cols.push('created_at'); vals.push('NOW()'); }
-
-  const sql = `INSERT INTO "${T_EVT}" (${cols.join(', ')}) VALUES (${vals.join(', ')}) RETURNING ${evtListFields.length ? evtListFields.map(f=>`"${f}"`).join(', ') : '*'};`;
-  const { rows } = await db.query(sql, params);
-  const novo = rows[0] || {};
-
-  const animalRow = await getAnimalRow(ev.animal_id, uid);
-  if (ANIM_SIT_REP) {
-    if (ev.resultado === 'prenhe') {
-      const prev = calculaPrevisaoParto({ dataIA: iaRef.data });
-      await atualizarAnimalCampos({
-        animalId: ev.animal_id, ownerId: uid, situacaoReprodutiva: 'prenhe',
-        previsaoPartoISO: prev ? prev.toISOString() : null,
-      });
-    } else if (ev.resultado === 'vazia') {
-      const estavaPrenhe = String(animalRow?.sit_rep || '').toLowerCase() === 'prenhe';
-      if (estavaPrenhe) {
-        const detLoss = { causa: 'perda_embrião_suspeita', ia_ref_data: iaRef.data, janela };
-        const c2 = [], v2 = [], p2 = [];
-        if (EVT_ANIM_COL) { c2.push(`"${EVT_ANIM_COL}"`); p2.push(ev.animal_id); v2.push(`$${p2.length}`); }
-        if (EVT_DATA)     { c2.push(`"${EVT_DATA}"`);     p2.push(dxISO); v2.push(`$${p2.length}`); }
-        if (EVT_TIPO)     { c2.push(`"${EVT_TIPO}"`);     p2.push('PERDA_REPRODUTIVA'); v2.push(`$${p2.length}`); }
-        if (EVT_DETALHES) { c2.push(`"${EVT_DETALHES}"`); p2.push(JSON.stringify(detLoss)); v2.push(`$${p2.length}::jsonb`); }
-        if (HAS_OWNER_EVT){ c2.push('owner_id'); p2.push(uid); v2.push(`$${p2.length}`); }
-        if (HAS_UPD_EVT)  { c2.push('updated_at'); v2.push('NOW()'); }
-        if (HAS_CREATED_EVT){ c2.push('created_at'); v2.push('NOW()'); }
-        await db.query(`INSERT INTO "${T_EVT}" (${c2.join(', ')}) VALUES (${v2.join(', ')})`, p2);
+    if (resultado === 'prenhe') {
+      const { rows: iaRows } = await db.query(
+        `SELECT data AS ultima_ia
+           FROM reproducao_eventos
+          WHERE animal_id = $1 AND tipo = 'IA'
+          ORDER BY data DESC
+          LIMIT 1`,
+        [animal_id]
+      );
+      let previsao_parto = null;
+      if (iaRows?.length) {
+        const ia = parseISO(iaRows[0].ultima_ia) || parseBR(iaRows[0].ultima_ia);
+        if (ia) {
+          const pp = new Date(ia.getTime());
+          pp.setDate(pp.getDate() + DIAS_GESTACAO);
+          previsao_parto = toISODate(pp);
+        }
       }
 
-      await atualizarAnimalCampos({
-        animalId: ev.animal_id,
-        ownerId: uid,
-        situacaoReprodutiva: 'vazia',
-        previsaoPartoISO: null,
-      });
-    } else {
-      await atualizarAnimalCampos({ animalId: ev.animal_id, ownerId: uid, situacaoReprodutiva: 'aguardando_diagnostico' });
+      await db.query(
+        `UPDATE animals
+            SET situacao_reprodutiva = 'Prenhe',
+                ${previsao_parto ? `previsao_parto = $2,` : ''} updated_at = now()
+          WHERE id = $1`,
+        previsao_parto ? [animal_id, previsao_parto] : [animal_id]
+      );
+    } else if (resultado === 'vazia') {
+      await db.query(
+        `UPDATE animals
+            SET situacao_reprodutiva = 'Vazia',
+                -- se quiser limpar a previsão, descomente a linha abaixo
+                -- previsao_parto = NULL,
+                updated_at = now()
+          WHERE id = $1`,
+        [animal_id]
+      );
     }
-  }
 
-  emitir('protocolosAtivosAtualizados');
-  emitir('registroReprodutivoAtualizado');
-  emitir('atualizarCalendario');
-  emitir('tarefasAtualizadas');
-  res.json(novo);
+    emitir('protocolosAtivosAtualizados');
+    emitir('registroReprodutivoAtualizado');
+    emitir('atualizarCalendario');
+    emitir('tarefasAtualizadas');
+
+    return res.status(201).json({ ok: true });
+  } catch (e) {
+    console.error('[POST /reproducao/diagnostico] erro:', e);
+    return res.status(500).json({ detail: 'Falha ao salvar diagnóstico.' });
+  }
 });
 
 /* =================== PRÉ-PARTO =================== */
