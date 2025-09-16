@@ -869,27 +869,24 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
         const resultado=mapa[payload.dg]||"indeterminado";
         const dataISO=brToISO(payload.data)||toISODate(today());
 
-        await postDiagnosticoAPI({
+        const resp = await postDiagnosticoAPI({
           animal_id:row.id,
           resultado,
           dataISO,
           detalhes: payload.extras || {}
         });
 
-        // Atualização OTIMISTA após DG
+        // Atualização OTIMISTA após DG usando retorno do backend
         setRows(prev => prev.map(a => {
           if (a.id !== row.id) return a;
-          let previsao = a.previsao_parto;
-          if (resultado === "prenhe") {
-            const ia = parseAnyDate(a.ultima_ia);
-            if (ia) previsao = formatBR(addDays(ia, 283));
-          }
+
+          const novaSit = resp?.situacao_reprodutiva || a.situacao_reprodutiva;
+          const ppBR = resp?.previsao_parto ? isoToBR(resp.previsao_parto) : a.previsao_parto;
+
           return {
             ...a,
-            situacao_reprodutiva: (resultado === "prenhe") ? "Prenhe" :
-                                  (resultado === "vazia")   ? "Vazia"   :
-                                                               a.situacao_reprodutiva,
-            previsao_parto: previsao
+            situacao_reprodutiva: novaSit,
+            previsao_parto: ppBR,
           };
         }));
 

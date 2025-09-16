@@ -1391,8 +1391,7 @@ router.post('/diagnostico', async (req, res) => {
       ? evtListFields.map(f => `"${f}"`).join(', ')
       : '*';
     const sql = `INSERT INTO "${T_EVT}" (${cols.join(', ')}) VALUES (${vals.join(', ')}) RETURNING ${returning};`;
-    const { rows } = await client.query(sql, params);
-    const novo = rows[0] || {};
+    await client.query(sql, params);
 
     const camposAnimal = { animalId, ownerId, client };
     if (resultado === 'prenhe') {
@@ -1411,6 +1410,38 @@ router.post('/diagnostico', async (req, res) => {
 
     await atualizarAnimalCampos(camposAnimal).catch(() => {});
 
+    let situacaoFinal = ANIM_SIT_REP ? (camposAnimal.situacaoReprodutiva ?? null) : null;
+    let previsaoPartoFinal = camposAnimal.previsaoPartoISO ?? null;
+
+    if (ANIM_ID_COL && (ANIM_SIT_REP || ANIM_PREV_PARTO)) {
+      const camposSel = [];
+      if (ANIM_SIT_REP) camposSel.push(`"${ANIM_SIT_REP}" AS __sit__`);
+      if (ANIM_PREV_PARTO) camposSel.push(`"${ANIM_PREV_PARTO}" AS __prev__`);
+      if (camposSel.length) {
+        const where = [`"${ANIM_ID_COL}" = $1`];
+        const paramsSel = [animalId];
+        if (HAS_OWNER_ANIM && ownerId) { where.push(`"owner_id" = $${paramsSel.length + 1}`); paramsSel.push(ownerId); }
+        try {
+          const sqlSel = `SELECT ${camposSel.join(', ')} FROM "${T_ANIM}" WHERE ${where.join(' AND ')} LIMIT 1`;
+          const { rows: animalRows } = await client.query(sqlSel, paramsSel);
+          const animalFinal = animalRows?.[0] || {};
+          if (ANIM_SIT_REP && animalFinal.__sit__ != null) {
+            situacaoFinal = animalFinal.__sit__;
+          }
+          if (ANIM_PREV_PARTO) {
+            if (animalFinal.__prev__ == null) {
+              previsaoPartoFinal = null;
+            } else {
+              const iso = ensureISODate(animalFinal.__prev__);
+              if (iso) previsaoPartoFinal = iso;
+            }
+          }
+        } catch (err) {
+          console.warn('[POST /reproducao/diagnostico] falha ao ler estado final:', err?.message);
+        }
+      }
+    }
+
     await client.query('COMMIT');
 
     emitir('protocolosAtivosAtualizados');
@@ -1418,7 +1449,12 @@ router.post('/diagnostico', async (req, res) => {
     emitir('atualizarCalendario');
     emitir('tarefasAtualizadas');
 
-    return res.status(201).json(novo);
+    return res.status(201).json({
+      ok: true,
+      resultado,
+      situacao_reprodutiva: situacaoFinal,
+      previsao_parto: previsaoPartoFinal ?? null,
+    });
   } catch (e) {
     try { await client?.query('ROLLBACK'); } catch {}
     console.error('[POST /reproducao/diagnostico] erro:', e);
