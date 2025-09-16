@@ -172,7 +172,7 @@ const HAS_CREATED_ANIM  = ANIM_COLS.has('created_at');
 // animals (campos opcionais)
 const ANIM_ID_COL = findCol(ANIM_COLS, ['id','animal_id','uuid']);
 const ANIM_SIT_REP = findCol(ANIM_COLS, [
-  'situacao_reprodutiva','sit_reprodutiva','status_reprodutivo','situacao_rep','situacao_repro','estado'
+  'situacao_reprodutiva','sit_reprodutiva','status_reprodutivo','situacao_rep','situacao_repro','situacaoReprodutiva'
 ]);
 const ANIM_SIT_PROD = findCol(ANIM_COLS, [
   'situacao_produtiva', 'sit_produtiva',
