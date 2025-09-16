@@ -880,8 +880,16 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
         setRows(prev => prev.map(a => {
           if (a.id !== row.id) return a;
 
-          const novaSit = resp?.situacao_reprodutiva || a.situacao_reprodutiva;
-          const ppBR = resp?.previsao_parto ? isoToBR(resp.previsao_parto) : a.previsao_parto;
+          // 1) usa o que o backend retornou (ideal)
+          let novaSit = resp?.situacao_reprodutiva || a.situacao_reprodutiva;
+          let ppBR = resp?.previsao_parto ? isoToBR(resp.previsao_parto) : a.previsao_parto;
+
+          // 2) fallback otimista caso o backend ainda não atualize imediatamente
+          if (!resp?.situacao_reprodutiva && resultado === "prenhe") {
+            novaSit = "Prenhe";
+            const ia = parseAnyDate(a.ultima_ia);
+            if (ia) ppBR = formatBR(addDays(ia, 283));
+          }
 
           return {
             ...a,
