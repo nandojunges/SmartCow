@@ -198,6 +198,14 @@ const ALLOWED_KEYS = new Set([
   'status','tipo_saida','motivo_saida','observacao_saida','data_saida','valor_saida','valor_venda',
 ]);
 
+const READ_ONLY_REPRO_KEYS = new Set([
+  'ultima_ia','ultimaIa',
+  'ia_anterior','iaAnterior',
+  'parto','ultimo_parto','parto_anterior','partoAnterior',
+  'secagem_anterior','secagemAnterior',
+  'situacao_reprodutiva','situacaoReprodutiva',
+]);
+
 const aliasMap = (body) => {
   const out = { ...body };
   if (out.ultimaIa != null && out.ultima_ia == null) out.ultima_ia = out.ultimaIa;
@@ -207,6 +215,15 @@ const aliasMap = (body) => {
   if (out.previsaoPartoISO != null && out.previsao_parto_iso == null) out.previsao_parto_iso = out.previsaoPartoISO;
   return out;
 };
+
+function stripReadOnlyReproFields(body) {
+  if (!body || typeof body !== 'object') return body;
+  const out = { ...body };
+  for (const key of READ_ONLY_REPRO_KEYS) {
+    if (key in out) delete out[key];
+  }
+  return out;
+}
 
 function normalizeDatesToISO(obj) {
   const o = { ...obj };
@@ -243,6 +260,7 @@ router.use((req, res, next) => {
 
   // 2) aliases
   let clean = aliasMap(bAllowed);
+  clean = stripReadOnlyReproFields(clean);
 
   // 3) mapeia lote dinamicamente
   const lote_id_in   = clean.lote_id   ?? clean.grupo_id   ?? null;
