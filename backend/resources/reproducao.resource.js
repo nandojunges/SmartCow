@@ -373,6 +373,7 @@ async function atualizarAnimalCampos({
   if (!ANIM_ID_COL) return;
   const runner = client || db;
 
+  // 1) Se NÃO existir coluna de previsão de parto, gravar no historico.previsoes.parto
   if (!ANIM_PREV_PARTO && previsaoPartoISO !== undefined && ANIM_COLS.has('historico')) {
     const sel = await runner.query(
       `SELECT historico FROM "${T_ANIM}" WHERE "${ANIM_ID_COL}" = $1 ${HAS_OWNER_ANIM && ownerId ? 'AND owner_id=$2' : ''} LIMIT 1`,
@@ -393,6 +394,61 @@ async function atualizarAnimalCampos({
       `UPDATE "${T_ANIM}" SET historico = $1 ${HAS_UPD_ANIM ? ', "updated_at"=NOW()' : ''} WHERE "${ANIM_ID_COL}"=$2 ${HAS_OWNER_ANIM && ownerId ? 'AND owner_id=$3' : ''}`,
       HAS_OWNER_ANIM && ownerId ? [JSON.stringify(hist), animalId, ownerId] : [JSON.stringify(hist), animalId]
     );
+  }
+
+  // 2) Espelho em historico quando FALTAM colunas dedicadas (animais “novos” sem schema antigo)
+  //    Isso garante que IA/DG/Parto/Secagem e situação sejam persistidos mesmo sem colunas.
+  if (ANIM_COLS.has('historico')) {
+    const needsHist =
+      (!ANIM_SIT_REP && situacaoReprodutiva !== undefined) ||
+      (!ANIM_SIT_PROD && situacaoProdutiva !== undefined) ||
+      (!ANIM_ULT_IA && ultimaIA !== undefined) ||
+      (!ANIM_IA_ANT && iaAnterior !== undefined) ||
+      (!ANIM_ULT_PARTO_COL && ultimoParto !== undefined) ||
+      (!ANIM_PARTO_ANT_COL && partoAnterior !== undefined) ||
+      (!ANIM_SECAGEM_ANT_COL && secagemAnterior !== undefined) ||
+      (!ANIM_DECISAO && decisao !== undefined);
+
+    if (needsHist) {
+      const sel2 = await runner.query(
+        `SELECT historico FROM "${T_ANIM}" WHERE "${ANIM_ID_COL}" = $1 ${HAS_OWNER_ANIM && ownerId ? 'AND owner_id=$2' : ''} LIMIT 1`,
+        HAS_OWNER_ANIM && ownerId ? [animalId, ownerId] : [animalId]
+      );
+      let hist2 = sel2.rows[0]?.historico;
+      if (!hist2 || typeof hist2 !== 'object') { try { hist2 = JSON.parse(hist2 || '{}'); } catch { hist2 = {}; } }
+      hist2.espelho = hist2.espelho || {};
+      const put = (k, v) => { if (v !== undefined) hist2.espelho[k] = v; };
+
+      // Situações (texto direto)
+      if (!ANIM_SIT_REP)  put('situacaoReprodutiva', situacaoReprodutiva ?? hist2.espelho?.situacaoReprodutiva ?? null);
+      if (!ANIM_SIT_PROD && !ANIM_ESTADO) put('situacaoProdutiva', situacaoProdutiva ?? hist2.espelho?.situacaoProdutiva ?? null);
+
+      // Datas (espelhar como BR quando a entrada for ISO válida; null limpa)
+      const toBR = (iso) => {
+        if (!iso) return null;
+        const dt = new Date(iso);
+        if (isNaN(dt)) return null;
+        const dd = String(dt.getDate()).padStart(2,'0');
+        const mm = String(dt.getMonth()+1).padStart(2,'0');
+        const yy = dt.getFullYear();
+        return `${dd}/${mm}/${yy}`;
+      };
+
+      if (!ANIM_ULT_IA)         put('ultimaIA',       ultimaIA === null ? null : toBR(ultimaIA) ?? hist2.espelho?.ultimaIA);
+      if (!ANIM_IA_ANT)         put('iaAnterior',     iaAnterior === null ? null : toBR(iaAnterior) ?? hist2.espelho?.iaAnterior);
+      if (!ANIM_ULT_PARTO_COL)  put('ultimoParto',    ultimoParto === null ? null : toBR(ultimoParto) ?? hist2.espelho?.ultimoParto);
+      if (!ANIM_PARTO_ANT_COL)  put('partoAnterior',  partoAnterior === null ? null : toBR(partoAnterior) ?? hist2.espelho?.partoAnterior);
+      if (!ANIM_SECAGEM_ANT_COL)put('secagemAnterior',secagemAnterior === null ? null : toBR(secagemAnterior) ?? hist2.espelho?.secagemAnterior);
+      if (!ANIM_DECISAO) {
+        if (decisao === null || String(decisao).trim()==='') put('decisao', null);
+        else if (decisao !== undefined) put('decisao', String(decisao));
+      }
+
+      await runner.query(
+        `UPDATE "${T_ANIM}" SET historico = $1 ${HAS_UPD_ANIM ? ', "updated_at"=NOW()' : ''} WHERE "${ANIM_ID_COL}"=$2 ${HAS_OWNER_ANIM && ownerId ? 'AND owner_id=$3' : ''}`,
+        HAS_OWNER_ANIM && ownerId ? [JSON.stringify(hist2), animalId, ownerId] : [JSON.stringify(hist2), animalId]
+      );
+    }
   }
 
   const sets = [];
