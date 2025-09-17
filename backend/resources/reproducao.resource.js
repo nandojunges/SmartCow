@@ -1504,6 +1504,16 @@ router.post('/diagnostico', async (req, res) => {
       else if (norm === 'vazia' || norm === 'vazio') situacaoFinal = 'Vazia';
     }
 
+    // Se a coluna específica não foi atualizada (por exemplo, animais recém criados),
+    // utilize os valores calculados no backend para refletir o diagnóstico informado.
+    if (!situacaoFinal) {
+      if (resultado === 'prenhe') situacaoFinal = 'Prenhe';
+      else if (resultado === 'vazia') situacaoFinal = 'Vazia';
+    }
+    if (!previsaoPartoFinal && camposAnimal.previsaoPartoISO) {
+      previsaoPartoFinal = camposAnimal.previsaoPartoISO;
+    }
+
     await client.query('COMMIT');
 
     emitir('protocolosAtivosAtualizados');
