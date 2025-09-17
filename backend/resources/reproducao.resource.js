@@ -482,9 +482,16 @@ async function atualizarAnimalCampos({
     }
   }
 
-  if (ANIM_SIT_REP && situacaoReprodutiva) {
-    sets.push(`"${ANIM_SIT_REP}" = $${params.length + 1}`);
-    params.push(situacaoReprodutiva);
+  // Atualiza a coluna de situação reprodutiva. Se não existir coluna
+  // dedicada (ANIM_SIT_REP), usa a coluna "estado" como fallback.
+  if (situacaoReprodutiva) {
+    if (ANIM_SIT_REP) {
+      sets.push(`"${ANIM_SIT_REP}" = $${params.length + 1}`);
+      params.push(situacaoReprodutiva);
+    } else if (ANIM_ESTADO) {
+      sets.push(`"${ANIM_ESTADO}" = $${params.length + 1}`);
+      params.push(situacaoReprodutiva);
+    }
   }
 
   if (ANIM_ULT_PARTO_COL && ultimoParto !== undefined) {
