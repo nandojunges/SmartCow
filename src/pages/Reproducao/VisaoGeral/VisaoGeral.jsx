@@ -505,7 +505,7 @@ async function getAnimaisFromAPI(){
     // >>> reprodutiva (NUNCA cair para "estado")
     const sitRepKey = pick(a, "situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro","situacaoReprodutiva");
 
-    // >>> produtiva (aceita camelCase e outros alias; pode cair para "estado")
+    // >>> produtiva
     const sitProdKey = pick(a, "situacao_produtiva","sit_produtiva","situacaoProdutiva","status_produtivo","statusProdutivo","estado_produtivo","estado");
 
     return {
@@ -515,7 +515,6 @@ async function getAnimaisFromAPI(){
       parto:a.parto||a.ultimo_parto||"",
       ultima_ia:a[ultimaIaKey]||"",
       previsao_parto:a[prevPartoKey]||"",
-      // fallback local — se prenhe e sem previsao, calcula pela IA (mostra na UI)
       ...( (String(a[sitRepKey]||"").toLowerCase().includes("pren") && !(a[prevPartoKey]))
           ? { previsao_parto: (() => {
                 const d = parseAnyDate(a[ultimaIaKey]);
@@ -529,17 +528,28 @@ async function getAnimaisFromAPI(){
       status_geral:(a.status_geral||a.situacao||"").toLowerCase(),
     };
   });
+
+  // >>> Ordem correta de endpoints (primeiro o do backend novo):
+  // 1) /api/v1/reproducao/animais  (oficial)
+  // 2) /api/v1/animals            (compat)
+  // 3) /api/v1/animais            (compat)
   try{
-    const { data } = await api.get("/api/v1/animals",{ params:{ limit:1000 }});
+    const { data } = await api.get("/api/v1/reproducao/animais",{ params:{ limit:1000 }});
     if(Array.isArray(data?.items)) return norm(data.items);
     if(Array.isArray(data)) return norm(data);
-  }catch(e){
+  }catch(e1){
     try{
-      const { data } = await api.get("/api/v1/animais",{ params:{ limit:1000 }});
+      const { data } = await api.get("/api/v1/animals",{ params:{ limit:1000 }});
       if(Array.isArray(data?.items)) return norm(data.items);
       if(Array.isArray(data)) return norm(data);
     }catch(e2){
-      console.warn("[Reproducao] Falha ao carregar animais:", e2?.response?.status||e2?.message);
+      try{
+        const { data } = await api.get("/api/v1/animais",{ params:{ limit:1000 }});
+        if(Array.isArray(data?.items)) return norm(data.items);
+        if(Array.isArray(data)) return norm(data);
+      }catch(e3){
+        console.warn("[Reproducao] Falha ao carregar animais:", e3?.response?.status||e3?.message);
+      }
     }
   }
   return [];
