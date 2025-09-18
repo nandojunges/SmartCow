@@ -579,11 +579,12 @@ async function getAnimaisFromAPI(){
   for (const id of ids) {
     const A = mapAni.get(id) || {};
     const R = mapRep.get(id) || {};
-    const situacao_reprodutiva = (A.situacao_reprodutiva || R.situacao_reprodutiva || "").trim();
-    const situacao_produtiva   = (A.situacao_produtiva   || R.situacao_produtiva   || "").trim();
-    const parto                = A.parto || R.parto || "";
+    // >>> reprodução é a fonte de verdade
+    const situacao_reprodutiva = (R.situacao_reprodutiva || A.situacao_reprodutiva || "").trim();
+    const situacao_produtiva   = (R.situacao_produtiva   || A.situacao_produtiva   || "").trim();
+    const parto                = R.parto || A.parto || "";
     const ultima_ia            = R.ultima_ia || A.ultima_ia || "";
-    const previsao_parto       = A.previsao_parto || R.previsao_parto || "";
+    const previsao_parto       = (R.previsao_parto || A.previsao_parto || "").trim();
 
     const out = {
       ...(R.id ? R : A),
