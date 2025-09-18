@@ -501,17 +501,20 @@ async function getAnimaisFromAPI(){
   const pick = (o, ...keys) => keys.find(k => o[k] !== undefined && o[k] !== null && o[k] !== "") ?? null;
   const norm=(arr)=>(arr||[]).map(a=>{
     const id = a.id||a.animal_id||a.uuid;
+    // >>> prioriza camelCase:
     const ultimaIaKey = pick(a, "ultimaIa","ultimaIA","ultima_ia","data_ultima_ia");
     const prevPartoKey = pick(a, "previsaoParto","previsao_parto","prev_parto","previsao_parto_dt");
     const ultimaIaVal = ultimaIaKey ? a[ultimaIaKey] : "";
     const prevPartoVal = prevPartoKey ? a[prevPartoKey] : "";
 
     // >>> reprodutiva (NUNCA cair para "estado")
-    const sitRepKey = pick(a, "situacaoReprodutiva","situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro");
+    // inclui 'sit_rep' (payload do resource de reprodução)
+    const sitRepKey = pick(a, "situacaoReprodutiva","situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro","sit_rep");
     const sitRepVal = sitRepKey ? a[sitRepKey] : "";
 
     // >>> produtiva
-    const sitProdKey = pick(a, "situacaoProdutiva","situacao_produtiva","sit_produtiva","status_produtivo","statusProdutivo","estado_produtivo","estado");
+    // inclui 'sit_prod' (payload do resource de reprodução)
+    const sitProdKey = pick(a, "situacaoProdutiva","situacao_produtiva","sit_produtiva","status_produtivo","statusProdutivo","estado_produtivo","estado","sit_prod");
     const sitProdVal = sitProdKey ? a[sitProdKey] : "";
 
     return {
