@@ -186,7 +186,12 @@ const ANIM_IA_ANT = findCol(ANIM_COLS, ['ia_anterior','data_ia_anterior','iaAnte
 const ANIM_ULT_PARTO_COL = findCol(ANIM_COLS, ['ultimo_parto','parto','data_ultimo_parto','ultimoParto']);
 const ANIM_PARTO_ANT_COL = findCol(ANIM_COLS, ['parto_anterior','penultimo_parto','partoAnterior','parto_anterior_data']);
 const ANIM_SECAGEM_ANT_COL = findCol(ANIM_COLS, ['secagem_anterior','ultima_secagem','secagemAnterior','data_secagem_anterior']);
-const ANIM_PREV_PARTO = findCol(ANIM_COLS, ['previsao_parto','prev_parto','previsao_parto_dt','previsaoParto']);
+const ANIM_PREV_PARTO     = findCol(ANIM_COLS, ['previsao_parto','prev_parto','previsao_parto_dt','previsaoParto']);
+// novas colunas ISO/auxiliares (persistência "fonte da verdade")
+const ANIM_PREV_PARTO_ISO = findCol(ANIM_COLS, ['previsao_parto_iso','previsaoPartoISO','prev_parto_iso']);
+const ANIM_IA_ANT_REAL    = findCol(ANIM_COLS, ['ia_anterior','iaAnterior']);
+const ANIM_PARTO_ANT_REAL = findCol(ANIM_COLS, ['parto_anterior','partoAnterior']);
+const ANIM_SECAGEM_ANT    = findCol(ANIM_COLS, ['secagem_anterior','secagemAnterior']);
 const ANIM_DECISAO = findCol(ANIM_COLS, ['decisao']);
 const ANIM_NUM   = findCol(ANIM_COLS, ['numero','num','number','identificador']);
 const ANIM_BRINC = findCol(ANIM_COLS, ['brinco','ear_tag','earTag','brinc']);
@@ -374,7 +379,8 @@ async function atualizarAnimalCampos({
   const runner = client || db;
 
   // 1) Se NÃO existir coluna de previsão de parto, gravar no historico.previsoes.parto
-  if (!ANIM_PREV_PARTO && previsaoPartoISO !== undefined && ANIM_COLS.has('historico')) {
+  // histórico (fallback) quando não existe coluna previsao_parto_iso ou previsao_parto (texto BR)
+  if (!ANIM_PREV_PARTO && !ANIM_PREV_PARTO_ISO && previsaoPartoISO !== undefined && ANIM_COLS.has('historico')) {
     const sel = await runner.query(
       `SELECT historico FROM "${T_ANIM}" WHERE "${ANIM_ID_COL}" = $1 ${HAS_OWNER_ANIM && ownerId ? 'AND owner_id=$2' : ''} LIMIT 1`,
       HAS_OWNER_ANIM && ownerId ? [animalId, ownerId] : [animalId]
@@ -469,6 +475,7 @@ async function atualizarAnimalCampos({
   }
 
   if (ANIM_IA_ANT && iaAnterior !== undefined) {
+    // manter compatibilidade antiga: coluna que armazena BR
     if (iaAnterior === null) {
       sets.push(`"${ANIM_IA_ANT}" = NULL`);
     } else {
@@ -480,6 +487,11 @@ async function atualizarAnimalCampos({
         sets.push(`"${ANIM_IA_ANT}" = NULL`);
       }
     }
+  }
+  // coluna ISO real da IA anterior (se existir)
+  if (ANIM_IA_ANT_REAL && iaAnterior !== undefined) {
+    if (iaAnterior === null) sets.push(`"${ANIM_IA_ANT_REAL}" = NULL`);
+    else { sets.push(`"${ANIM_IA_ANT_REAL}" = $${params.length + 1}`); params.push(ensureISODate(iaAnterior)); }
   }
 
   // Atualiza a coluna de situação reprodutiva. Se não existir coluna
@@ -521,17 +533,25 @@ async function atualizarAnimalCampos({
       }
     }
   }
+  // coluna ISO real do parto anterior (se existir)
+  if (ANIM_PARTO_ANT_REAL && partoAnterior !== undefined) {
+    if (partoAnterior === null) sets.push(`"${ANIM_PARTO_ANT_REAL}" = NULL`);
+    else { sets.push(`"${ANIM_PARTO_ANT_REAL}" = $${params.length + 1}`); params.push(ensureISODate(partoAnterior)); }
+  }
 
-  if (ANIM_SECAGEM_ANT_COL && secagemAnterior !== undefined) {
+  if ((ANIM_SECAGEM_ANT_COL || ANIM_SECAGEM_ANT) && secagemAnterior !== undefined) {
     if (secagemAnterior === null) {
-      sets.push(`"${ANIM_SECAGEM_ANT_COL}" = NULL`);
+      if (ANIM_SECAGEM_ANT_COL) sets.push(`"${ANIM_SECAGEM_ANT_COL}" = NULL`);
+      if (ANIM_SECAGEM_ANT)     sets.push(`"${ANIM_SECAGEM_ANT}" = NULL`);
     } else {
       const br = isoToBRDate(secagemAnterior);
-      if (br) {
-        sets.push(`"${ANIM_SECAGEM_ANT_COL}" = $${params.length + 1}`);
-        params.push(br);
-      } else {
-        sets.push(`"${ANIM_SECAGEM_ANT_COL}" = NULL`);
+      if (ANIM_SECAGEM_ANT_COL) {
+        if (br) { sets.push(`"${ANIM_SECAGEM_ANT_COL}" = $${params.length + 1}`); params.push(br); }
+        else { sets.push(`"${ANIM_SECAGEM_ANT_COL}" = NULL`); }
+      }
+      if (ANIM_SECAGEM_ANT) {
+        sets.push(`"${ANIM_SECAGEM_ANT}" = $${params.length + 1}`);
+        params.push(ensureISODate(secagemAnterior));
       }
     }
   }
@@ -547,6 +567,7 @@ async function atualizarAnimalCampos({
     }
   }
 
+  // previsao_parto (BR) compat + previsao_parto_iso (ISO) como fonte da verdade
   if (ANIM_PREV_PARTO && previsaoPartoISO !== undefined) {
     if (previsaoPartoISO === null) {
       sets.push(`"${ANIM_PREV_PARTO}" = NULL`);
@@ -557,6 +578,14 @@ async function atualizarAnimalCampos({
       const yyyy = dt.getFullYear();
       sets.push(`"${ANIM_PREV_PARTO}" = $${params.length + 1}`);
       params.push(`${dd}/${mm}/${yyyy}`);
+    }
+  }
+  if (ANIM_PREV_PARTO_ISO && previsaoPartoISO !== undefined) {
+    if (previsaoPartoISO === null) {
+      sets.push(`"${ANIM_PREV_PARTO_ISO}" = NULL`);
+    } else {
+      sets.push(`"${ANIM_PREV_PARTO_ISO}" = $${params.length + 1}`);
+      params.push(ensureISODate(previsaoPartoISO));
     }
   }
 
@@ -1463,12 +1492,13 @@ router.post('/diagnostico', async (req, res) => {
         const dtIA = parseAnyDate(iaAnterior.data);
         if (dtIA) {
           const prev = addDays(dtIA, DIAS_GESTACAO);
-          camposAnimal.previsaoPartoISO = ymd(prev);
+          camposAnimal.previsaoPartoISO = ymd(prev); // gravaremos ISO (e BR compat)
         }
       }
       camposAnimal.situacaoReprodutiva = 'Prenhe';
     } else if (resultado === 'vazia') {
       camposAnimal.situacaoReprodutiva = 'Vazia';
+      camposAnimal.previsaoPartoISO = null; // limpar previsão ao marcar vazia
     }
 
     await atualizarAnimalCampos(camposAnimal).catch(() => {});
