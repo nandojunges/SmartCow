@@ -955,7 +955,8 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
 
           // 2) fallback otimista caso o backend ainda não atualize imediatamente
           if (!resp?.situacaoReprodutiva && !resp?.situacao_reprodutiva && resultado === "prenhe") {
-            novaSit = "Prenhe";
+            // manter otimista; front exibe bonito via classifyReprod
+            novaSit = "prenhe";
             const ia = parseAnyDate(a.ultimaIa ?? a.ultima_ia);
             if (ia) ppBR = formatBR(addDays(ia, 283));
           }
@@ -998,8 +999,9 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
           ...a,
           ultima_ia: isoToBR(dataISO) || a.ultima_ia,
           ultimaIa: isoToBR(dataISO) || a.ultimaIa,
-          situacao_reprodutiva: "Inseminada",
-          situacaoReprodutiva: "Inseminada",
+          // guardamos como veio do backend (minúsculo) para a classificação ficar estável
+          situacao_reprodutiva: "inseminada",
+          situacaoReprodutiva: "inseminada",
         } : a));
         debitaDoseLocal(payload.touroId, 1);
         await refreshAnimaisAfterChange();
@@ -1028,10 +1030,10 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
     const dataISO=toISODate(today());
     try{
       for(const id of ids) await postDiagnosticoAPI({ animal_id:id, resultado, dataISO });
-      // otimista de lote
+      // otimista de lote (minúsculo; UI formata)
       setRows(prev => prev.map(a => {
         if (!ids.includes(a.id)) return a;
-        const valor = (resultado==="prenhe"?"Prenhe":"Vazia");
+        const valor = (resultado==="prenhe"?"prenhe":"vazia");
         return { ...a, situacao_reprodutiva: valor, situacaoReprodutiva: valor };
       }));
       await refreshAnimaisAfterChange();
@@ -1073,8 +1075,9 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
           ...a,
           ultima_ia: isoToBR(dataISO) || a.ultima_ia,
           ultimaIa: isoToBR(dataISO) || a.ultimaIa,
-          situacao_reprodutiva:"Inseminada",
-          situacaoReprodutiva:"Inseminada",
+          // mantemos minúsculo para bater com o backend e reaproveitar a classificação
+          situacao_reprodutiva:"inseminada",
+          situacaoReprodutiva:"inseminada",
         } : a));
       }
       await refreshAnimaisAfterChange();
