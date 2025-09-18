@@ -204,6 +204,7 @@ const READ_ONLY_REPRO_KEYS = new Set([
   'parto','ultimo_parto','parto_anterior','partoAnterior',
   'secagem_anterior','secagemAnterior',
   'situacao_reprodutiva','situacaoReprodutiva',
+  'previsao_parto_iso','previsaoPartoISO','prev_parto_iso',
 ]);
 
 const aliasMap = (body) => {
@@ -236,6 +237,9 @@ function normalizeDatesToISO(obj) {
     const iso = toISODate(o.previsao_parto_iso) || o.previsao_parto_iso;
     o.previsao_parto_iso = iso;
   }
+  if (hasCol('ia_anterior')        && typeof o.ia_anterior === 'string')        o.ia_anterior        = toISODate(o.ia_anterior)        || o.ia_anterior;
+  if (hasCol('parto_anterior')     && typeof o.parto_anterior === 'string')     o.parto_anterior     = toISODate(o.parto_anterior)     || o.parto_anterior;
+  if (hasCol('secagem_anterior')   && typeof o.secagem_anterior === 'string')   o.secagem_anterior   = toISODate(o.secagem_anterior)   || o.secagem_anterior;
   return o;
 }
 
@@ -311,7 +315,8 @@ router.use((req, res, next) => {
  
   // 5.1) Fallback: allowed keys sem coluna -> historico.meta (só se houver coluna historico)
   const maybeDateKeys = new Set([
-    'nascimento','ultima_ia','parto','ultimo_parto','previsao_parto','previsao_parto_iso'
+    'nascimento','ultima_ia','parto','ultimo_parto','previsao_parto','previsao_parto_iso',
+    'ia_anterior','parto_anterior','secagem_anterior'
   ]);
   let histMeta = hasCol('historico') ? clean.historico : null;
   const metaToPush = {};
