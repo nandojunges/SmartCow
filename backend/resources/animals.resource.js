@@ -133,7 +133,19 @@ const candidatesList = [
   'status','tipo_saida','motivo_saida','observacao_saida','data_saida','valor_saida','valor_venda',
   'historico','created_at','updated_at'
 ];
-const listFields = candidatesList.filter(hasCol);
+const listFieldsBase = candidatesList.filter(hasCol);
+const camelAliasPairs = [
+  ['situacao_reprodutiva', 'situacaoReprodutiva'],
+  ['situacao_produtiva',  'situacaoProdutiva'],
+  ['ultima_ia',           'ultimaIa'],
+  ['previsao_parto',      'previsaoParto'],
+];
+const listFields = [
+  ...listFieldsBase,
+  ...camelAliasPairs
+    .filter(([col]) => hasCol(col))
+    .map(([col, alias]) => ({ column: col, alias })),
+];
 
 const candidatesSearch = ['numero','brinco','raca','estado','pai','mae','situacao_produtiva','situacao_reprodutiva'];
 const searchFields = candidatesSearch.filter(hasCol);

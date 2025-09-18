@@ -354,7 +354,9 @@ async function getAnimalRow(animalId, ownerId) {
   const fields = [
     `"${ANIM_ID_COL}" AS id`,
     ANIM_SIT_REP && `"${ANIM_SIT_REP}" AS sit_rep`,
+    ANIM_SIT_REP && `"${ANIM_SIT_REP}" AS "situacaoReprodutiva"`,
     ANIM_PREV_PARTO && `"${ANIM_PREV_PARTO}" AS prev_parto`,
+    ANIM_PREV_PARTO && `"${ANIM_PREV_PARTO}" AS "previsaoParto"`,
   ].filter(Boolean).join(', ');
   const params = [animalId];
   const where = [`"${ANIM_ID_COL}" = $1`];
@@ -1250,10 +1252,14 @@ router.get('/calendario', async (req, res) => {
       const fields = [
         `a."${ANIM_ID_COL}" AS id`,
         ANIM_PREV_PARTO && `a."${ANIM_PREV_PARTO}" AS prev_parto`,
+        ANIM_PREV_PARTO && `a."${ANIM_PREV_PARTO}" AS "previsaoParto"`,
         ANIM_SIT_REP && `a."${ANIM_SIT_REP}" AS sit_rep`,
+        ANIM_SIT_REP && `a."${ANIM_SIT_REP}" AS "situacaoReprodutiva"`,
         ANIM_SIT_PROD && `a."${ANIM_SIT_PROD}" AS sit_prod`,
+        ANIM_SIT_PROD && `a."${ANIM_SIT_PROD}" AS "situacaoProdutiva"`,
         ANIM_ESTADO && `a."${ANIM_ESTADO}" AS estado`,
         ANIM_ULT_IA && `a."${ANIM_ULT_IA}" AS ultima_ia`,
+        ANIM_ULT_IA && `a."${ANIM_ULT_IA}" AS "ultimaIa"`,
       ].filter(Boolean).join(', ');
 
       if (ANIM_PREV_PARTO && ANIM_SIT_REP) {
@@ -1273,11 +1279,14 @@ router.get('/calendario', async (req, res) => {
 
       for (const a of prenhes) {
         // decidir data de parto: prev_parto (se houver) OU ultima_ia + 283 (se sit_rep ~ prenhe)
-        let parto = parseDateFlexible(a.prev_parto);
-        const isPrenhe = normStr(a.sit_rep).includes('pren');
+        const prevPartoRaw = a.previsaoParto ?? a.prev_parto;
+        let parto = parseDateFlexible(prevPartoRaw);
+        const sitRepRaw = a.situacaoReprodutiva ?? a.sit_rep;
+        const isPrenhe = normStr(sitRepRaw).includes('pren');
 
-        if (!parto && isPrenhe && a.ultima_ia) {
-          const ui = parseDateFlexible(a.ultima_ia);
+        const ultimaIaRaw = a.ultimaIa ?? a.ultima_ia;
+        if (!parto && isPrenhe && ultimaIaRaw) {
+          const ui = parseDateFlexible(ultimaIaRaw);
           if (ui) { const d = new Date(ui); d.setDate(d.getDate() + DIAS_GESTACAO); parto = d; }
         }
         if (!parto) continue;
@@ -1292,7 +1301,7 @@ router.get('/calendario', async (req, res) => {
         addItem(new Date(parto), 'PARTO_PREVISTO', 'Parto previsto');
         addItem(subDays(parto, prepartoOffset), 'PRE_PARTO_INICIO', 'Início pré-parto');
 
-        const sitProd = normStr(a.sit_prod || a.estado);
+        const sitProd = normStr((a.situacaoProdutiva ?? a.sit_prod ?? a.estado) || '');
         const isLact = sitProd.includes('lact');
         if (isPrenhe && isLact) {
           addItem(subDays(parto, secagemOffset), 'SECAGEM_PREVISTA', 'Secagem prevista');
@@ -1561,6 +1570,8 @@ router.post('/diagnostico', async (req, res) => {
     return res.status(201).json({
       ok: true,
       resultado,
+      situacaoReprodutiva: situacaoFinal,
+      previsaoParto: previsaoPartoFinal ?? null,
       situacao_reprodutiva: situacaoFinal,
       previsao_parto: previsaoPartoFinal ?? null,
     });
@@ -1761,10 +1772,14 @@ router.get('/secagem/candidatas', async (req, res) => {
       ANIM_NUM   && `a."${ANIM_NUM}" AS numero`,
       ANIM_BRINC && `a."${ANIM_BRINC}" AS brinco`,
       ANIM_SIT_REP  && `a."${ANIM_SIT_REP}" AS sit_rep`,
+      ANIM_SIT_REP  && `a."${ANIM_SIT_REP}" AS "situacaoReprodutiva"`,
       ANIM_SIT_PROD && `a."${ANIM_SIT_PROD}" AS sit_prod`,
+      ANIM_SIT_PROD && `a."${ANIM_SIT_PROD}" AS "situacaoProdutiva"`,
       ANIM_ESTADO   && `a."${ANIM_ESTADO}" AS estado`,
       ANIM_PREV_PARTO && `a."${ANIM_PREV_PARTO}" AS prev_parto`,
+      ANIM_PREV_PARTO && `a."${ANIM_PREV_PARTO}" AS "previsaoParto"`,
       ANIM_ULT_IA && `a."${ANIM_ULT_IA}" AS ultima_ia`,
+      ANIM_ULT_IA && `a."${ANIM_ULT_IA}" AS "ultimaIa"`,
     ].filter(Boolean).join(', ');
 
     if (ANIM_SIT_REP) {
@@ -1781,15 +1796,18 @@ router.get('/secagem/candidatas', async (req, res) => {
     const events = [];
 
     for (const r of rows) {
-      const sitRep = normStr(r.sit_rep);
-      const sitProd = normStr(r.sit_prod || r.estado);
+      const sitRepVal = r.situacaoReprodutiva ?? r.sit_rep ?? null;
+      const sitRep = normStr(sitRepVal || '');
+      const sitProdVal = r.situacaoProdutiva ?? r.sit_prod ?? r.estado ?? null;
+      const sitProd = normStr(sitProdVal || '');
       const isPrenhe = sitRep.includes('pren');
       const isLact   = sitProd.includes('lact');
 
       // parto via prev_parto ou fallback em ultima_ia + 283
-      let ppISO = toISODateStringSafe(r.prev_parto);
-      if (!ppISO && isPrenhe && r.ultima_ia) {
-        const ui = parseDateFlexible(r.ultima_ia);
+      let ppISO = toISODateStringSafe(r.previsaoParto ?? r.prev_parto);
+      const ultimaIaVal = r.ultimaIa ?? r.ultima_ia;
+      if (!ppISO && isPrenhe && ultimaIaVal) {
+        const ui = parseDateFlexible(ultimaIaVal);
         if (ui) { const d = new Date(ui); d.setDate(d.getDate() + DIAS_GESTACAO); ppISO = ymd(d); }
       }
       if (!isPrenhe || !isLact || !ppISO) continue;
@@ -1800,9 +1818,11 @@ router.get('/secagem/candidatas', async (req, res) => {
 
       if (secISO >= start && secISO <= end) {
         items.push({
-          id: r.id, numero: r.numero || null, brinco: r.brinco || null,
-          situacaoReprodutiva: r.sit_rep || null,
-          situacaoProdutiva: r.sit_prod || r.estado || null,
+          id: r.id,
+          numero: r.numero || null,
+          brinco: r.brinco || null,
+          situacaoReprodutiva: sitRepVal,
+          situacaoProdutiva: sitProdVal,
           previsaoParto: ppISO,
           dataSecagemPrevista: secISO,
         });
@@ -1841,10 +1861,10 @@ router.post('/secagem', async (req, res) => {
     let dias_antes_parto = null;
     if (ANIM_PREV_PARTO) {
       const { rows: arows } = await db.query(
-        `SELECT "${ANIM_PREV_PARTO}" AS prev_parto FROM "${T_ANIM}" WHERE "${ANIM_ID_COL}"=$1 ${HAS_OWNER_ANIM && uid ? 'AND owner_id=$2':''} LIMIT 1`,
+        `SELECT "${ANIM_PREV_PARTO}" AS prev_parto, "${ANIM_PREV_PARTO}" AS "previsaoParto" FROM "${T_ANIM}" WHERE "${ANIM_ID_COL}"=$1 ${HAS_OWNER_ANIM && uid ? 'AND owner_id=$2':''} LIMIT 1`,
         HAS_OWNER_ANIM && uid ? [ev.animal_id, uid] : [ev.animal_id]
       );
-      const ppISO = toISODateStringSafe(arows?.[0]?.prev_parto);
+      const ppISO = toISODateStringSafe(arows?.[0]?.previsaoParto ?? arows?.[0]?.prev_parto);
       if (ppISO) {
         const dSec = new Date(dataISO);
         const dPP  = new Date(ppISO);
@@ -1998,10 +2018,14 @@ router.get('/animais', async (req, res) => {
       `a."${ANIM_ID_COL}" AS id`,
       ANIM_NUM   && `a."${ANIM_NUM}" AS "numero"`,
       ANIM_BRINC && `a."${ANIM_BRINC}" AS "brinco"`,
+      ANIM_SIT_REP   && `a."${ANIM_SIT_REP}" AS sit_rep`,
       ANIM_SIT_REP   && `a."${ANIM_SIT_REP}" AS "situacaoReprodutiva"`,
+      ANIM_SIT_PROD  && `a."${ANIM_SIT_PROD}" AS sit_prod`,
       ANIM_SIT_PROD  && `a."${ANIM_SIT_PROD}" AS "situacaoProdutiva"`,
       ANIM_ESTADO    && `a."${ANIM_ESTADO}" AS "estado"`,
-      ANIM_ULT_IA    && `a."${ANIM_ULT_IA}" AS "ultimaIA"`,
+      ANIM_ULT_IA    && `a."${ANIM_ULT_IA}" AS ultima_ia`,
+      ANIM_ULT_IA    && `a."${ANIM_ULT_IA}" AS "ultimaIa"`,
+      ANIM_PREV_PARTO&& `a."${ANIM_PREV_PARTO}" AS prev_parto`,
       ANIM_PREV_PARTO&& `a."${ANIM_PREV_PARTO}" AS "previsaoParto"`,
       ANIM_DECISAO   && `a."${ANIM_DECISAO}" AS "decisao"`,
       HAS_UPD_ANIM   && `a."updated_at"`,
@@ -2038,10 +2062,14 @@ router.get('/animais/:id', async (req, res) => {
       `a."${ANIM_ID_COL}" AS id`,
       ANIM_NUM   && `a."${ANIM_NUM}" AS "numero"`,
       ANIM_BRINC && `a."${ANIM_BRINC}" AS "brinco"`,
+      ANIM_SIT_REP   && `a."${ANIM_SIT_REP}" AS sit_rep`,
       ANIM_SIT_REP   && `a."${ANIM_SIT_REP}" AS "situacaoReprodutiva"`,
+      ANIM_SIT_PROD  && `a."${ANIM_SIT_PROD}" AS sit_prod`,
       ANIM_SIT_PROD  && `a."${ANIM_SIT_PROD}" AS "situacaoProdutiva"`,
       ANIM_ESTADO    && `a."${ANIM_ESTADO}" AS "estado"`,
-      ANIM_ULT_IA    && `a."${ANIM_ULT_IA}" AS "ultimaIA"`,
+      ANIM_ULT_IA    && `a."${ANIM_ULT_IA}" AS ultima_ia`,
+      ANIM_ULT_IA    && `a."${ANIM_ULT_IA}" AS "ultimaIa"`,
+      ANIM_PREV_PARTO&& `a."${ANIM_PREV_PARTO}" AS prev_parto`,
       ANIM_PREV_PARTO&& `a."${ANIM_PREV_PARTO}" AS "previsaoParto"`,
       ANIM_DECISAO   && `a."${ANIM_DECISAO}" AS "decisao"`,
       HAS_UPD_ANIM   && `a."updated_at"`,

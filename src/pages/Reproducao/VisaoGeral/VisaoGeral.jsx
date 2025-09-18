@@ -85,10 +85,10 @@ function diasDesde(br){
   if(!dt) return "—";
   return String(Math.max(0,diffDays(today(),dt)));
 }
-function calcPrevisaoParto({previsao_parto,ultima_ia}){
-  const pp=parseAnyDate(previsao_parto);
+function calcPrevisaoParto({previsao_parto,previsaoParto,ultima_ia,ultimaIa}){
+  const pp=parseAnyDate(previsaoParto ?? previsao_parto);
   if(pp) return pp;
-  const ia=parseAnyDate(ultima_ia);
+  const ia=parseAnyDate(ultimaIa ?? ultima_ia);
   // 283 para bater com backend (DIAS_GESTACAO)
   return ia?addDays(ia,283):null;
 }
@@ -136,7 +136,8 @@ function RegistrarButton({ onOpen }) {
 /** Produtiva: Lactante / Seca / Pré-parto / — */
 function classifyProd(row, settings){
   // valor explícito do backend (aceita snake e camel já normalizados em getAnimaisFromAPI)
-  const raw = String(row.situacao_produtiva||"").toLowerCase();
+  const prodRawVal = row.situacaoProdutiva ?? row.situacao_produtiva ?? "";
+  const raw = String(prodRawVal||"").toLowerCase();
   if(raw.includes("seca"))     return { label:"Seca",      tone:"muted" };
   if(raw.includes("lact"))     return { label:"Lactante",  tone:"ok" };
   if(raw.includes("pré")||raw.includes("pre-")||raw.includes("preparto")||raw.includes("pré-parto")||raw.includes("pre-parto"))
@@ -160,7 +161,8 @@ function classifyProd(row, settings){
 /** Reprodutiva: PEV / Pré-sincr. / IATF / Inseminada / Prenhe / Vazia */
 function classifyReprod(row, settings, normProd){
   // nunca herdar produtivo como reprodutivo
-  let base = String(row.situacao_reprodutiva||"").toLowerCase();
+  const repRawVal = row.situacaoReprodutiva ?? row.situacao_reprodutiva ?? "";
+  let base = String(repRawVal||"").toLowerCase();
   const produtivos = ["lact", "seca", "pré-parto", "pre-parto", "preparto"];
   if (produtivos.some(t => base.includes(t))) base = "";
 
@@ -183,7 +185,7 @@ function classifyReprod(row, settings, normProd){
   }
 
   // IA recente → Inseminada (+ janelas de DG)
-  const iaDt = parseAnyDate(row.ultima_ia);
+  const iaDt = parseAnyDate(row.ultimaIa ?? row.ultima_ia);
   if(iaDt){
     const d = diffDays(today(), iaDt);
     // janelas explícitas
@@ -207,7 +209,7 @@ function classifyReprod(row, settings, normProd){
 /* ================= regra de sugestão ================= */
 function buildStep(row, settings, normRep){
   const hoje=today();
-  const iaDt=parseAnyDate(row.ultima_ia);
+  const iaDt=parseAnyDate(row.ultimaIa ?? row.ultima_ia);
 
   // 1) Prenhe => nada
   if(normRep.label==="Prenhe") return { key:"NONE", label:"—", dueDate:null, detail:{ sitReprod:"Prenhe" } };
@@ -499,31 +501,40 @@ async function getAnimaisFromAPI(){
   const pick = (o, ...keys) => keys.find(k => o[k] !== undefined && o[k] !== null && o[k] !== "") ?? null;
   const norm=(arr)=>(arr||[]).map(a=>{
     const id = a.id||a.animal_id||a.uuid;
-    const ultimaIaKey = pick(a, "ultima_ia","data_ultima_ia","ultimaIA","ultimaIa");
-    const prevPartoKey = pick(a, "previsao_parto","prev_parto","previsaoParto","previsao_parto_dt");
+    const ultimaIaKey = pick(a, "ultimaIa","ultimaIA","ultima_ia","data_ultima_ia");
+    const prevPartoKey = pick(a, "previsaoParto","previsao_parto","prev_parto","previsao_parto_dt");
+    const ultimaIaVal = ultimaIaKey ? a[ultimaIaKey] : "";
+    const prevPartoVal = prevPartoKey ? a[prevPartoKey] : "";
 
     // >>> reprodutiva (NUNCA cair para "estado")
-    const sitRepKey = pick(a, "situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro","situacaoReprodutiva");
+    const sitRepKey = pick(a, "situacaoReprodutiva","situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro");
+    const sitRepVal = sitRepKey ? a[sitRepKey] : "";
 
     // >>> produtiva
-    const sitProdKey = pick(a, "situacao_produtiva","sit_produtiva","situacaoProdutiva","status_produtivo","statusProdutivo","estado_produtivo","estado");
+    const sitProdKey = pick(a, "situacaoProdutiva","situacao_produtiva","sit_produtiva","status_produtivo","statusProdutivo","estado_produtivo","estado");
+    const sitProdVal = sitProdKey ? a[sitProdKey] : "";
 
     return {
       id,
       numero:a.numero||a.num||a.codigo||"",
       brinco:a.brinco||a.ear||a.tag||"",
       parto:a.parto||a.ultimo_parto||"",
-      ultima_ia:a[ultimaIaKey]||"",
-      previsao_parto:a[prevPartoKey]||"",
-      ...( (String(a[sitRepKey]||"").toLowerCase().includes("pren") && !(a[prevPartoKey]))
-          ? { previsao_parto: (() => {
-                const d = parseAnyDate(a[ultimaIaKey]);
-                return d ? isoToBR(toISODate(addDays(d, 283))) : "";
-            })() }
+      ultima_ia:ultimaIaVal||"",
+      ultimaIa:ultimaIaVal||"",
+      previsao_parto:prevPartoVal||"",
+      previsaoParto:prevPartoVal||"",
+      ...( (String(sitRepVal||"").toLowerCase().includes("pren") && !(prevPartoVal))
+          ? (() => {
+              const d = parseAnyDate(ultimaIaVal);
+              const computed = d ? isoToBR(toISODate(addDays(d, 283))) : "";
+              return { previsao_parto: computed, previsaoParto: computed };
+            })()
           : {}
         ),
-      situacao_reprodutiva:a[sitRepKey]||"—",
-      situacao_produtiva:a[sitProdKey]||"",
+      situacao_reprodutiva:sitRepVal||"—",
+      situacaoReprodutiva:sitRepVal||"—",
+      situacao_produtiva:sitProdVal||"",
+      situacaoProdutiva:sitProdVal||"",
       decisao: (a.decisao === CLEAR_TOKEN ? "" : (a.decisao || "")),
       status_geral:(a.status_geral||a.situacao||"").toLowerCase(),
     };
@@ -802,14 +813,13 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
       });
 
       const label = String(prot.tipo || "").toUpperCase() === "IATF" ? "IATF" : "Pré-sincronização";
-      setRows(prev => prev.map(a =>
-        a.id === row.id
-          ? ({ ...a,
-               situacao_reprodutiva: (String(a.situacao_reprodutiva||"").toLowerCase().includes("prenhe")
-                 ? a.situacao_reprodutiva
-                 : label) })
-          : a
-      ));
+      setRows(prev => prev.map(a => {
+        if (a.id !== row.id) return a;
+        const atual = a.situacaoReprodutiva ?? a.situacao_reprodutiva ?? "";
+        const manterPrenhe = String(atual||"").toLowerCase().includes("prenhe");
+        const valor = manterPrenhe ? atual : label;
+        return { ...a, situacao_reprodutiva: valor, situacaoReprodutiva: valor };
+      }));
 
       await reloadBase();
     }catch(e){ console.error("Aplicar protocolo:", e); alert("Não foi possível aplicar o protocolo."); }
@@ -830,14 +840,13 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
       });
 
       const label = String(prot.tipo || "").toUpperCase() === "IATF" ? "IATF" : "Pré-sincronização";
-      setRows(prev => prev.map(a =>
-        ids.includes(a.id)
-          ? ({ ...a,
-               situacao_reprodutiva: (String(a.situacao_reprodutiva||"").toLowerCase().includes("prenhe")
-                 ? a.situacao_reprodutiva
-                 : label) })
-          : a
-      ));
+      setRows(prev => prev.map(a => {
+        if (!ids.includes(a.id)) return a;
+        const atual = a.situacaoReprodutiva ?? a.situacao_reprodutiva ?? "";
+        const manterPrenhe = String(atual||"").toLowerCase().includes("prenhe");
+        const valor = manterPrenhe ? atual : label;
+        return { ...a, situacao_reprodutiva: valor, situacaoReprodutiva: valor };
+      }));
 
       setSelecionados(new Set());
       await reloadBase();
@@ -891,20 +900,26 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
           if (a.id !== row.id) return a;
 
           // 1) usa o que o backend retornou (ideal)
-          let novaSit = resp?.situacao_reprodutiva || a.situacao_reprodutiva;
-          let ppBR = resp?.previsao_parto ? isoToBR(resp.previsao_parto) : a.previsao_parto;
+          let novaSit = resp?.situacaoReprodutiva
+            || resp?.situacao_reprodutiva
+            || a.situacaoReprodutiva
+            || a.situacao_reprodutiva;
+          const ppIso = resp?.previsaoParto || resp?.previsao_parto || null;
+          let ppBR = ppIso ? isoToBR(ppIso) : (a.previsaoParto || a.previsao_parto);
 
           // 2) fallback otimista caso o backend ainda não atualize imediatamente
-          if (!resp?.situacao_reprodutiva && resultado === "prenhe") {
+          if (!resp?.situacaoReprodutiva && !resp?.situacao_reprodutiva && resultado === "prenhe") {
             novaSit = "Prenhe";
-            const ia = parseAnyDate(a.ultima_ia);
+            const ia = parseAnyDate(a.ultimaIa ?? a.ultima_ia);
             if (ia) ppBR = formatBR(addDays(ia, 283));
           }
 
           return {
             ...a,
             situacao_reprodutiva: novaSit,
+            situacaoReprodutiva: novaSit,
             previsao_parto: ppBR,
+            previsaoParto: ppBR,
           };
         }));
 
@@ -933,7 +948,13 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
       }else if(payload.kind==="IA"){
         const dataISO=brToISO(payload.data)||toISODate(today());
         await postIAAPI({ animal_id:row.id, dataISO, touroId:payload.touroId, inseminadorId:payload.inseminadorId, obs:payload.obs });
-        setRows(prev => prev.map(a => a.id===row.id ? { ...a, ultima_ia: isoToBR(dataISO) || a.ultima_ia, situacao_reprodutiva: "Inseminada" } : a));
+        setRows(prev => prev.map(a => a.id===row.id ? {
+          ...a,
+          ultima_ia: isoToBR(dataISO) || a.ultima_ia,
+          ultimaIa: isoToBR(dataISO) || a.ultimaIa,
+          situacao_reprodutiva: "Inseminada",
+          situacaoReprodutiva: "Inseminada",
+        } : a));
         debitaDoseLocal(payload.touroId, 1);
         await refreshAnimaisAfterChange();
       }
@@ -962,10 +983,11 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
     try{
       for(const id of ids) await postDiagnosticoAPI({ animal_id:id, resultado, dataISO });
       // otimista de lote
-      setRows(prev => prev.map(a => ids.includes(a.id)
-        ? ({ ...a, situacao_reprodutiva: (resultado==="prenhe"?"Prenhe":"Vazia") })
-        : a
-      ));
+      setRows(prev => prev.map(a => {
+        if (!ids.includes(a.id)) return a;
+        const valor = (resultado==="prenhe"?"Prenhe":"Vazia");
+        return { ...a, situacao_reprodutiva: valor, situacaoReprodutiva: valor };
+      }));
       await refreshAnimaisAfterChange();
     }catch(e){ console.error("DG rápido (lote):", e); alert("Não foi possível registrar o DG rápido."); }
     finally{ setSelecionados(new Set()); }
@@ -1001,7 +1023,13 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
       }
       if(sucesso>0){
         debitaDoseLocal(touroId, sucesso);
-        setRows(prev => prev.map(a => ids.includes(a.id) ? { ...a, ultima_ia: isoToBR(dataISO) || a.ultima_ia, situacao_reprodutiva:"Inseminada" } : a));
+        setRows(prev => prev.map(a => ids.includes(a.id) ? {
+          ...a,
+          ultima_ia: isoToBR(dataISO) || a.ultima_ia,
+          ultimaIa: isoToBR(dataISO) || a.ultimaIa,
+          situacao_reprodutiva:"Inseminada",
+          situacaoReprodutiva:"Inseminada",
+        } : a));
       }
       await refreshAnimaisAfterChange();
     }catch(e){
@@ -1123,8 +1151,8 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
                   const selectedOpt = decisionOptions.find(o=>o.value===selectedId) || null;
 
                   const ultimaIaFmt = (() => {
-                    const dt = parseAnyDate(r.ultima_ia);
-                    return dt ? formatBR(dt) : (r.ultima_ia || "—");
+                    const dt = parseAnyDate(r.ultimaIa ?? r.ultima_ia);
+                    return dt ? formatBR(dt) : (r.ultimaIa || r.ultima_ia || "—");
                   })();
 
                   return (
