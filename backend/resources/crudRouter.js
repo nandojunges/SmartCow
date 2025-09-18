@@ -101,6 +101,45 @@ export function makeCrudRouter(cfg, db) {
     }
   }
 
+  function formatField(field) {
+    if (field == null) return null;
+    if (typeof field === 'string') {
+      const trimmed = field.trim();
+      if (!trimmed) return null;
+      if (trimmed === '*') return '*';
+      if (/[\s()]/.test(trimmed) || trimmed.includes('"')) return trimmed;
+      return `"${trimmed}"`;
+    }
+    if (Array.isArray(field)) {
+      const base = formatField(field[0]);
+      if (!base) return null;
+      const alias = field[1];
+      return alias ? `${base} AS "${alias}"` : base;
+    }
+    if (typeof field === 'object') {
+      const alias = field.alias ?? field.as ?? null;
+      if (field.raw != null) {
+        const base = typeof field.raw === 'string' ? field.raw.trim() : String(field.raw);
+        if (!base) return null;
+        return alias ? `${base} AS "${alias}"` : base;
+      }
+      const expr = field.column ?? field.col ?? field.expr ?? field.expression;
+      if (expr == null) return null;
+      const base = typeof expr === 'string'
+        ? ((/[\s()]/.test(expr) || expr.includes('"')) ? expr : '"' + expr + '"')
+        : String(expr);
+      return alias ? `${base} AS "${alias}"` : base;
+    }
+    return null;
+  }
+
+  function buildFieldsSql() {
+    if (!listFields.length) return '*';
+    if (listFields.some(f => typeof f === 'string' && f.trim() === '*')) return '*';
+    const formatted = listFields.map(formatField).filter(Boolean);
+    return formatted.length ? formatted.join(',') : '*';
+  }
+
   // LIST
   router.get('/', async (req, res) => {
     try {
@@ -114,9 +153,7 @@ export function makeCrudRouter(cfg, db) {
       if (!sortable.has(sort)) sort = idCol;
       if (!['asc', 'desc'].includes(order)) order = 'desc';
 
-      const fieldsSql = listFields[0] === '*'
-        ? '*'
-        : listFields.map(f => `"${f}"`).join(',');
+      const fieldsSql = buildFieldsSql();
 
       const where = [];
       const params = [];
@@ -161,9 +198,7 @@ export function makeCrudRouter(cfg, db) {
       const params = [req.params.id];
       applyScope(where, params, req);
 
-      const fieldsSql = listFields[0] === '*'
-        ? '*'
-        : listFields.map(f => `"${f}"`).join(',');
+      const fieldsSql = buildFieldsSql();
 
       const sql = `SELECT ${fieldsSql}
                    FROM "${table}"
@@ -220,9 +255,7 @@ export function makeCrudRouter(cfg, db) {
       const r = await q(sql, params);
       const newId = r.rows?.[0]?.[idCol];
 
-      const fieldsSql = listFields[0] === '*'
-        ? '*'
-        : listFields.map(f => `"${f}"`).join(',');
+      const fieldsSql = buildFieldsSql();
 
       const getSql = `SELECT ${fieldsSql}
                       FROM "${table}"
@@ -273,9 +306,7 @@ export function makeCrudRouter(cfg, db) {
       const r = await q(sql, params);
       if (!r.rowCount) return res.status(404).json({ error: 'Não encontrado' });
 
-      const fieldsSql = listFields[0] === '*'
-        ? '*'
-        : listFields.map(f => `"${f}"`).join(',');
+      const fieldsSql = buildFieldsSql();
 
       const getSql = `SELECT ${fieldsSql}
                       FROM "${table}"
