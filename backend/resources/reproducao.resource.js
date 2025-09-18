@@ -1544,10 +1544,11 @@ router.post('/diagnostico', async (req, res) => {
       }
     }
 
+    // manter banco em minúsculo; o front classifica/mostra bonito
     if (typeof situacaoFinal === 'string' && situacaoFinal) {
       const norm = normStr(situacaoFinal).trim();
-      if (norm === 'prenhe' || norm === 'prenha') situacaoFinal = 'Prenhe';
-      else if (norm === 'vazia' || norm === 'vazio') situacaoFinal = 'Vazia';
+      if (norm === 'prenhe' || norm === 'prenha') situacaoFinal = 'prenhe';
+      else if (norm === 'vazia' || norm === 'vazio') situacaoFinal = 'vazia';
     }
 
     // Se a coluna específica não foi atualizada (por exemplo, animais recém criados),
