@@ -569,12 +569,20 @@ async function getAnimaisFromAPI(){
   for (const id of ids) {
     const A = mapAni.get(id) || {};
     const R = mapRep.get(id) || {};
-    // ⚠️ Dê preferência ao /reproducao/animais (R), que reflete DG/IA imediatamente
-    const situacao_reprodutiva = (R.situacao_reprodutiva || A.situacao_reprodutiva || "").trim();
-    const situacao_produtiva   = (R.situacao_produtiva   || A.situacao_produtiva   || "").trim();
-    const parto                = R.parto || A.parto || "";
-    const ultima_ia            = R.ultima_ia || A.ultima_ia || "";
-    const previsao_parto       = (R.previsao_parto || A.previsao_parto || "");
+    // ⚠️ Preferir R SEM cair para A quando R vier "", e nunca rebaixar "prenhe"
+    const preferPrenhe = (r, a) => {
+      const rt = String(r ?? "").toLowerCase();
+      const at = String(a ?? "").toLowerCase();
+      if (rt.includes("pren")) return (r ?? "").trim();
+      if (at.includes("pren")) return (a ?? "").trim();
+      return (r ?? a ?? "").trim();
+    };
+
+    const situacao_reprodutiva = preferPrenhe(R.situacao_reprodutiva, A.situacao_reprodutiva);
+    const situacao_produtiva   = (R.situacao_produtiva   ?? A.situacao_produtiva   ?? "").trim();
+    const parto                =  R.parto                ?? A.parto                ?? "";
+    const ultima_ia            =  R.ultima_ia            ?? A.ultima_ia            ?? "";
+    const previsao_parto       =  R.previsao_parto       ?? A.previsao_parto       ?? "";
 
     const out = {
       ...(R.id ? R : A),
