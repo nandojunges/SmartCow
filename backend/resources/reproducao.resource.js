@@ -2112,8 +2112,9 @@ router.use('/eventos', async (req, res, next) => {
             await atualizarAnimalCampos({
               animalId: eventAnimalId,
               ownerId: uid,
+              // padroniza em minúsculo e ISO sem horário
               situacaoReprodutiva: 'prenhe',
-              previsaoPartoISO: prev ? prev.toISOString() : null,
+              previsaoPartoISO: prev ? ymd(prev) : null,
             });
           } else if (resultado === 'vazia') {
             await atualizarAnimalCampos({
