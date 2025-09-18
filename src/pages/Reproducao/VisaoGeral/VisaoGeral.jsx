@@ -537,7 +537,7 @@ async function getAnimaisFromAPI(){
     return base;
   });
 
-  let rep = [], ani = [], aniCompat = [];
+  let rep = [], ani = [];
   await Promise.allSettled([
     (async () => {
       try {
@@ -559,19 +559,9 @@ async function getAnimaisFromAPI(){
         ani = [];
       }
     })(),
-    (async () => {
-      try {
-        const { data } = await api.get("/api/v1/animais", { params:{ limit:1000 }});
-        aniCompat = Array.isArray(data?.items) ? normalize(data.items)
-                 : Array.isArray(data) ? normalize(data)
-                 : [];
-      } catch (e) {
-        aniCompat = [];
-      }
-    })(),
   ]);
 
-  const mapAni = new Map([...(ani||[]), ...(aniCompat||[])].map(a => [a.id, a]));
+  const mapAni = new Map((ani||[]).map(a => [a.id, a]));
   const mapRep = new Map((rep||[]).map(a => [a.id, a]));
   const ids = new Set([...mapAni.keys(), ...mapRep.keys()]);
 
