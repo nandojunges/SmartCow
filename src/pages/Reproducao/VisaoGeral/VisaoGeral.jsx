@@ -498,75 +498,117 @@ async function getProtocolosFromAPI(){
   }
 }
 async function getAnimaisFromAPI(){
-  const pick = (o, ...keys) => keys.find(k => o[k] !== undefined && o[k] !== null && o[k] !== "") ?? null;
-  const norm=(arr)=>(arr||[]).map(a=>{
-    const id = a.id||a.animal_id||a.uuid;
-    // >>> prioriza camelCase:
+  const pick = (o, ...keys) =>
+    keys.find(k => o && o[k] !== undefined && o[k] !== null && o[k] !== "") ?? null;
+
+  const normalize = (arr = []) => (arr || []).map(a => {
+    const id = a?.id || a?.animal_id || a?.uuid;
     const ultimaIaKey = pick(a, "ultimaIa","ultimaIA","ultima_ia","data_ultima_ia");
     const prevPartoKey = pick(a, "previsaoParto","previsao_parto","prev_parto","previsao_parto_dt");
-    const ultimaIaVal = ultimaIaKey ? a[ultimaIaKey] : "";
-    const prevPartoVal = prevPartoKey ? a[prevPartoKey] : "";
-
-    // >>> reprodutiva (NUNCA cair para "estado")
-    // inclui 'sit_rep' (payload do resource de reprodução)
-    const sitRepKey = pick(a, "situacaoReprodutiva","situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro","sit_rep");
-    const sitRepVal = sitRepKey ? a[sitRepKey] : "";
-
-    // >>> produtiva
-    // inclui 'sit_prod' (payload do resource de reprodução)
+    const sitRepKey  = pick(a, "situacaoReprodutiva","situacao_reprodutiva","sit_reprodutiva","status_reprodutivo","situacao_rep","situacao_repro","sit_rep");
     const sitProdKey = pick(a, "situacaoProdutiva","situacao_produtiva","sit_produtiva","status_produtivo","statusProdutivo","estado_produtivo","estado","sit_prod");
-    const sitProdVal = sitProdKey ? a[sitProdKey] : "";
 
-    return {
+    const base = {
       id,
-      numero:a.numero||a.num||a.codigo||"",
-      brinco:a.brinco||a.ear||a.tag||"",
-      parto:a.parto||a.ultimo_parto||"",
-      ultima_ia:ultimaIaVal||"",
-      ultimaIa:ultimaIaVal||"",
-      previsao_parto:prevPartoVal||"",
-      previsaoParto:prevPartoVal||"",
-      ...( (String(sitRepVal||"").toLowerCase().includes("pren") && !(prevPartoVal))
-          ? (() => {
-              const d = parseAnyDate(ultimaIaVal);
-              const computed = d ? isoToBR(toISODate(addDays(d, 283))) : "";
-              return { previsao_parto: computed, previsaoParto: computed };
-            })()
-          : {}
-        ),
-      situacao_reprodutiva:sitRepVal||"—",
-      situacaoReprodutiva:sitRepVal||"—",
-      situacao_produtiva:sitProdVal||"",
-      situacaoProdutiva:sitProdVal||"",
-      decisao: (a.decisao === CLEAR_TOKEN ? "" : (a.decisao || "")),
-      status_geral:(a.status_geral||a.situacao||"").toLowerCase(),
+      numero: a?.numero || a?.num || a?.codigo || "",
+      brinco: a?.brinco || a?.ear || a?.tag || "",
+      parto: a?.parto || a?.ultimo_parto || "",
+      ultima_ia: a?.[ultimaIaKey] || "",
+      ultimaIa: a?.[ultimaIaKey] || "",
+      previsao_parto: a?.[prevPartoKey] || "",
+      previsaoParto: a?.[prevPartoKey] || "",
+      situacao_reprodutiva: a?.[sitRepKey] || "",
+      situacaoReprodutiva: a?.[sitRepKey] || "",
+      situacao_produtiva: a?.[sitProdKey] || "",
+      situacaoProdutiva: a?.[sitProdKey] || "",
+      decisao: (a?.decisao === CLEAR_TOKEN ? "" : (a?.decisao || "")),
+      status_geral: String(a?.status_geral || a?.situacao || "").toLowerCase(),
     };
-  });
 
-  // >>> Ordem correta de endpoints (primeiro o do backend novo):
-  // 1) /api/v1/reproducao/animais  (oficial)
-  // 2) /api/v1/animals            (compat)
-  // 3) /api/v1/animais            (compat)
-  try{
-    const { data } = await api.get("/api/v1/reproducao/animais",{ params:{ limit:1000 }});
-    if(Array.isArray(data?.items)) return norm(data.items);
-    if(Array.isArray(data)) return norm(data);
-  }catch(e1){
-    try{
-      const { data } = await api.get("/api/v1/animals",{ params:{ limit:1000 }});
-      if(Array.isArray(data?.items)) return norm(data.items);
-      if(Array.isArray(data)) return norm(data);
-    }catch(e2){
-      try{
-        const { data } = await api.get("/api/v1/animais",{ params:{ limit:1000 }});
-        if(Array.isArray(data?.items)) return norm(data.items);
-        if(Array.isArray(data)) return norm(data);
-      }catch(e3){
-        console.warn("[Reproducao] Falha ao carregar animais:", e3?.response?.status||e3?.message);
+    const isPrenhe = String(base.situacao_reprodutiva || "").toLowerCase().includes("pren");
+    if (isPrenhe && !base.previsao_parto) {
+      const d = parseAnyDate(base.ultima_ia);
+      if (d) {
+        const computed = isoToBR(toISODate(addDays(d, 283)));
+        base.previsao_parto = computed;
+        base.previsaoParto = computed;
       }
     }
+    return base;
+  });
+
+  let rep = [], ani = [], aniCompat = [];
+  await Promise.allSettled([
+    (async () => {
+      try {
+        const { data } = await api.get("/api/v1/reproducao/animais", { params:{ limit:1000 }});
+        rep = Array.isArray(data?.items) ? normalize(data.items)
+            : Array.isArray(data) ? normalize(data)
+            : [];
+      } catch (e) {
+        rep = [];
+      }
+    })(),
+    (async () => {
+      try {
+        const { data } = await api.get("/api/v1/animals", { params:{ limit:1000 }});
+        ani = Array.isArray(data?.items) ? normalize(data.items)
+            : Array.isArray(data) ? normalize(data)
+            : [];
+      } catch (e) {
+        ani = [];
+      }
+    })(),
+    (async () => {
+      try {
+        const { data } = await api.get("/api/v1/animais", { params:{ limit:1000 }});
+        aniCompat = Array.isArray(data?.items) ? normalize(data.items)
+                 : Array.isArray(data) ? normalize(data)
+                 : [];
+      } catch (e) {
+        aniCompat = [];
+      }
+    })(),
+  ]);
+
+  const mapAni = new Map([...(ani||[]), ...(aniCompat||[])].map(a => [a.id, a]));
+  const mapRep = new Map((rep||[]).map(a => [a.id, a]));
+  const ids = new Set([...mapAni.keys(), ...mapRep.keys()]);
+
+  const merged = [];
+  for (const id of ids) {
+    const A = mapAni.get(id) || {};
+    const R = mapRep.get(id) || {};
+    const situacao_reprodutiva = (A.situacao_reprodutiva || R.situacao_reprodutiva || "").trim();
+    const situacao_produtiva   = (A.situacao_produtiva   || R.situacao_produtiva   || "").trim();
+    const parto                = A.parto || R.parto || "";
+    const ultima_ia            = R.ultima_ia || A.ultima_ia || "";
+    const previsao_parto       = A.previsao_parto || R.previsao_parto || "";
+
+    const out = {
+      ...(R.id ? R : A),
+      situacao_reprodutiva,
+      situacaoReprodutiva: situacao_reprodutiva,
+      situacao_produtiva,
+      situacaoProdutiva: situacao_produtiva,
+      parto,
+      ultima_ia,
+      ultimaIa: ultima_ia,
+      previsao_parto,
+      previsaoParto: previsao_parto,
+    };
+
+    if (!out.previsao_parto && String(out.situacao_reprodutiva||"").toLowerCase().includes("pren")) {
+      const d = parseAnyDate(out.ultima_ia);
+      if (d) {
+        const computed = isoToBR(toISODate(addDays(d, 283)));
+        out.previsao_parto = computed;
+        out.previsaoParto = computed;
+      }
+    }
+    merged.push(out);
   }
-  return [];
+  return merged;
 }
 async function getTourosFromAPI(){
   try{
