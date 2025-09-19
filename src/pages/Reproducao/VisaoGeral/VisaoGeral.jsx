@@ -730,6 +730,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
   const [err,setErr]=useState("");
   const [touros,setTouros]=useState([]);
   const [insems,setInsems]=useState([]);
+  const optimisticRef = useRef({});
 
   // Decisões
   const [decisoes,setDecisoes]=useState(loadDecisions());
@@ -752,6 +753,21 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
     return created.id;
   };
 
+  const applyOptimism = (arr) => {
+    if (!Array.isArray(arr)) return arr;
+    const now = Date.now();
+    return arr.map(a => {
+      const hold = optimisticRef.current[a.id];
+      if (hold && now < hold.until) {
+        return { ...a, ...hold.values };
+      }
+      if (hold && now >= hold.until) {
+        delete optimisticRef.current[a.id];
+      }
+      return a;
+    });
+  };
+
   // carrega base
   const reloadBase = async () => {
     setLoading(true); setErr("");
@@ -762,7 +778,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
       setProtocolos(protos);
       const fromProp = Array.isArray(animaisProp)&&animaisProp.length?animaisProp:null;
       const rowsData = fromProp||animais;
-      setRows(rowsData);
+      setRows(applyOptimism(rowsData));
       setTouros(t); setInsems(i);
 
       // últimas decisões
@@ -908,7 +924,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
   const refreshAnimaisAfterChange = async () => {
     try {
       const animais = await getAnimaisFromAPI();
-      setRows(animais);
+      setRows(applyOptimism(animais));
       const ids = animais.map(a=>a.id);
       if(ids.length){
         const ult = await getUltimasDecisoesAPI(ids);
@@ -923,6 +939,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
       console.warn("Refresh animais falhou:", e?.message);
     }
   };
+
 
   const handleRegistrarSubmit= async (payload)=>{
     const row=drawer.row; if(!row) return;
@@ -939,6 +956,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
           detalhes: payload.extras || {}
         });
 
+        let dgHoldValues = null;
         // Atualização OTIMISTA após DG usando retorno do backend
         setRows(prev => prev.map(a => {
           if (a.id !== row.id) return a;
@@ -959,14 +977,28 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
             if (ia) ppBR = formatBR(addDays(ia, 283));
           }
 
-          return {
+          const next = {
             ...a,
             situacao_reprodutiva: novaSit,
             situacaoReprodutiva: novaSit,
             previsao_parto: ppBR,
             previsaoParto: ppBR,
           };
+          dgHoldValues = {
+            situacao_reprodutiva: next.situacao_reprodutiva,
+            situacaoReprodutiva: next.situacaoReprodutiva,
+            previsao_parto: next.previsao_parto,
+            previsaoParto: next.previsaoParto,
+          };
+          return next;
         }));
+        if (dgHoldValues) {
+          // trava otimista: evita regressão se o backend demorar a refletir
+          optimisticRef.current[row.id] = {
+            until: Date.now() + 8000,
+            values: dgHoldValues,
+          };
+        }
 
         await refreshAnimaisAfterChange();
       }else if(payload.kind==="PROTOCOLO"){
@@ -992,15 +1024,35 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
         await refreshAnimaisAfterChange();
       }else if(payload.kind==="IA"){
         const dataISO=brToISO(payload.data)||toISODate(today());
+        const ultimaIaBR = isoToBR(dataISO);
         await postIAAPI({ animal_id:row.id, dataISO, touroId:payload.touroId, inseminadorId:payload.inseminadorId, obs:payload.obs });
-        setRows(prev => prev.map(a => a.id===row.id ? {
-          ...a,
-          ultima_ia: isoToBR(dataISO) || a.ultima_ia,
-          ultimaIa: isoToBR(dataISO) || a.ultimaIa,
-          // guardamos como veio do backend (minúsculo) para a classificação ficar estável
-          situacao_reprodutiva: "inseminada",
-          situacaoReprodutiva: "inseminada",
-        } : a));
+        let iaHoldValues = null;
+        setRows(prev => prev.map(a => {
+          if (a.id !== row.id) return a;
+          const nextUltimaIaBR = ultimaIaBR || a.ultima_ia;
+          const nextUltimaIaCamel = ultimaIaBR || a.ultimaIa;
+          const next = {
+            ...a,
+            ultima_ia: nextUltimaIaBR,
+            ultimaIa: nextUltimaIaCamel,
+            // guardamos como veio do backend (minúsculo) para a classificação ficar estável
+            situacao_reprodutiva: "inseminada",
+            situacaoReprodutiva: "inseminada",
+          };
+          iaHoldValues = {
+            ultima_ia: next.ultima_ia,
+            ultimaIa: next.ultimaIa,
+            situacao_reprodutiva: next.situacao_reprodutiva,
+            situacaoReprodutiva: next.situacaoReprodutiva,
+          };
+          return next;
+        }));
+        if (iaHoldValues) {
+          optimisticRef.current[row.id] = {
+            until: Date.now() + 8000,
+            values: iaHoldValues,
+          };
+        }
         debitaDoseLocal(payload.touroId, 1);
         await refreshAnimaisAfterChange();
       }
@@ -1053,6 +1105,7 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
   const iaRapidaConfirm = async ({ data, touroId, inseminadorId, obs })=>{
     const ids=Array.from(selecionados); if(!ids.length){ setIaLoteOpen(false); return; }
     const dataISO=brToISO(data)||toISODate(today());
+    const ultimaIaBR = isoToBR(dataISO);
     const tSel = touros.find(t=>t.id===touroId);
     theSaldo: {
       const saldo = Number.isFinite(+tSel?.restantes) ? tSel.restantes : Infinity;
@@ -1069,14 +1122,36 @@ export default function VisaoGeral({ animais: animaisProp, onCountChange }){
       }
       if(sucesso>0){
         debitaDoseLocal(touroId, sucesso);
-        setRows(prev => prev.map(a => ids.includes(a.id) ? {
-          ...a,
-          ultima_ia: isoToBR(dataISO) || a.ultima_ia,
-          ultimaIa: isoToBR(dataISO) || a.ultimaIa,
-          // mantemos minúsculo para bater com o backend e reaproveitar a classificação
-          situacao_reprodutiva:"inseminada",
-          situacaoReprodutiva:"inseminada",
-        } : a));
+        const holdById = {};
+        setRows(prev => prev.map(a => {
+          if (!ids.includes(a.id)) return a;
+          const nextUltimaIaBR = ultimaIaBR || a.ultima_ia;
+          const nextUltimaIaCamel = ultimaIaBR || a.ultimaIa;
+          const next = {
+            ...a,
+            ultima_ia: nextUltimaIaBR,
+            ultimaIa: nextUltimaIaCamel,
+            // mantemos minúsculo para bater com o backend e reaproveitar a classificação
+            situacao_reprodutiva:"inseminada",
+            situacaoReprodutiva:"inseminada",
+          };
+          holdById[a.id] = {
+            ultima_ia: next.ultima_ia,
+            ultimaIa: next.ultimaIa,
+            situacao_reprodutiva: next.situacao_reprodutiva,
+            situacaoReprodutiva: next.situacaoReprodutiva,
+          };
+          return next;
+        }));
+        const holdUntil = Date.now() + 8000;
+        for (const id of ids) {
+          if (holdById[id]) {
+            optimisticRef.current[id] = {
+              until: holdUntil,
+              values: holdById[id],
+            };
+          }
+        }
       }
       await refreshAnimaisAfterChange();
     }catch(e){
